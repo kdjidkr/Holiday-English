@@ -1,0 +1,27 @@
+const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const mod={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/expressionAnalysis.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,process:{env:{}}});
+const {validateExpressionTips,expressionToPattern}=mod.exports;
+const source='What are you up to after work? It is chilly today.';
+const selection={source,selected:'up',start:13,end:15};
+const phrase={expression:'be up to',surface:'are you up to',kind:'phrase',meaning:'무엇을 할 예정인지',explanation:'up to를 함께 보아야 하며 위로라는 뜻이 아닙니다.',example:'What are you up to? — 무엇을 할 예정이에요?'};
+const unrelated={...phrase,expression:'chilly',surface:'chilly',kind:'word'};
+assert.equal(validateExpressionTips({expressions:[phrase,unrelated,phrase,{...phrase,surface:'invented phrase'}]},selection).length,1);
+const whole={source,selected:source,start:0,end:source.length};
+assert.equal(validateExpressionTips({expressions:[phrase,unrelated]},whole).length,2);
+const first=expressionToPattern(phrase,selection,1,'Jack');
+assert.equal(first.shiftDay,1);assert.equal(first.sourceQuote,source);assert.equal(first.selectedText,'up');assert.equal(first.expressionKind,'phrase');assert.equal(first.sourceSpeaker,'Jack');
+assert.equal(first.id,expressionToPattern(phrase,whole,2,'Emma').id);
+assert.notEqual(first.id,expressionToPattern({...phrase,meaning:'일을 꾸미다'},whole,2,'Emma').id);
+console.log('PASS: partial phrase selection, multiple relevant expressions, original-source validation, deduplication, vault context and stable IDs');
+
+const selectionMod={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/dialogueSelection.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:selectionMod,exports:selectionMod.exports});
+const mobile=selectionMod.exports;
+const original="  G'day!  What are you up to?\nNice day.";
+const words=mobile.dialogueWords(original);assert.equal(words[0].text,"G'day!");
+const chosen=mobile.wordSelection(original,4,5);assert.equal(chosen.selected,'up to?');
+assert.equal(original.slice(chosen.start,chosen.end),chosen.selected);assert.equal(chosen.source,original);
+assert.equal(mobile.wordSelection(original,0,words.length-1).selected,"G'day!  What are you up to?\nNice day.");
+assert.equal(mobile.wordSelection('',0,0),null);assert.equal(mobile.wordSelection(original,2,1),null);
+console.log('PASS: mobile whole-word ranges preserve apostrophes, whitespace, line breaks and original dialogue offsets');

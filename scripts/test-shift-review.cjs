@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const mod={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/shiftReview.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,process:{env:{}},fetch:()=>{throw Error('No network expected');}});
+const {validateShiftReview,reviewContext,reviewExpressionToPattern,generateShiftReview}=mod.exports;
+const record={id:'shift-test',day:4,sessions:[{customer:{name:'Jack'},dialogue:[{speaker:'customer',text:'How long have you worked here?'},{speaker:'user',text:'I work here since two weeks.'},{speaker:'customer',text:'Welcome to Brisbane!'},{speaker:'user',text:'Help',rescue:true}]}]};
+const card={sessionIndex:0,turnIndex:1,koreanSentence:'이곳에서 일한 지 2주 됐어요.',kind:'polish',note:'기간을 나타내는 for와 현재완료를 사용해요.',expressions:[{english:'I have been working here for two weeks.',koreanMeaning:'이곳에서 일한 지 2주 됐어요.',explanation:'for는 기간을 나타내요.'},{english:'I started working here two weeks ago.',koreanMeaning:'2주 전에 여기서 일하기 시작했어요.',explanation:'시작 시점을 말하는 다른 표현이에요.'}]};
+const cards=validateShiftReview({cards:[card,card,{...card,turnIndex:0},{...card,turnIndex:3},{...card,sessionIndex:99}]},record);
+assert.equal(validateShiftReview({cards:[card]},{...record,sessions:[{...record.sessions[0],dialogue:record.sessions[0].dialogue.map((turn,index)=>index===1?{...turn,assisted:true}:turn)}]}).length,0);
+assert.equal(cards.length,1);assert.equal(reviewContext(record,card).length,3);
+const pattern=reviewExpressionToPattern(record,card,0);
+assert.equal(pattern.sourceQuote,'I work here since two weeks.');assert.equal(pattern.slotExamples[0],'Jack: How long have you worked here?');
+assert.equal(pattern.englishTemplate,card.expressions[0].english);assert.equal(pattern.id,reviewExpressionToPattern({...record,day:5},card,0).id);
+assert.notEqual(pattern.id,reviewExpressionToPattern(record,card,1).id);
+const changedGood=validateShiftReview({cards:[{...card,kind:'good',note:"'unrelated expression'은 좋은 표현이에요."}]},record)[0];
+assert.equal(changedGood.kind,'alternative');assert.equal(changedGood.note.includes('unrelated expression'),false);
+assert.equal(validateShiftReview({cards:[]},record).length,0);
+generateShiftReview({...record,sessions:[{dialogue:[{speaker:'customer',text:'Hi!'},{speaker:'user',text:'',rescue:true}]}]},new AbortController().signal).then(result=>{assert.equal(result.length,0);console.log('PASS: review grounded in actual user turns, rescue exclusion, contextual dialogue, individual expression storage, sparse-shift handling');}).catch(error=>{console.error(error);process.exitCode=1;});

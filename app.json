@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Sunny Side · Aussie WH",
+    "slug": "aussie-wh-simulator",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#2D4C40"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "손님과의 실시간 영어 스몰토크 대화를 위해 마이크 권한이 필요합니다."
+      }
+    },
+    "android": {
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
+    }
+  }
+}
