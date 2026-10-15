@@ -1,6 +1,6 @@
 import type { CustomerPersona } from '../scenarios/types';
 import type { DialogueTurn } from './gameRules';
-declare const process: { env: { EXPO_PUBLIC_GEMINI_API_KEY?: string } };
+import {apiUrl} from './apiUrl';
 export interface HandoverGreeting { english: string; korean: string }
 
 export function defaultHandoverGreeting(customer: CustomerPersona): HandoverGreeting {
@@ -34,10 +34,8 @@ export function handoverContext(customer: CustomerPersona, dialogue: DialogueTur
 }
 
 export async function generateHandoverGreeting(customer: CustomerPersona, dialogue: DialogueTurn[], signal: AbortSignal): Promise<HandoverGreeting> {
-  const key=(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim();
-  if(!key)throw new Error('No greeting connection');
-  const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',{
-    method:'POST',signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},
+  const response=await fetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
+    method:'POST',signal,headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       systemInstruction:{parts:[{text:`Write ONE very short natural Australian English line spoken by the HUMAN PLAYER / BARISTA (speaker=user) TO the AI CUSTOMER (speaker=customer) while handing the customer their actual order. These roles never switch. In the generated line, I/my refers to the barista; you/your refers to the customer. Dialogue turn speaker and addressee fields identify who said each line and to whom. Read the whole supplied dialogue, not only the last reply.
 Before composing, identify separately for each relevant plan or recommendation: who proposed it, whom it was proposed to, and who would actually perform the action. Preserve those relationships in both English and Korean. A suggestion is not a confirmed plan; agreement or acknowledgement alone must not become a definite commitment. Never transfer the barista's plans, preferences, experiences or recommendations to the customer, or vice versa.

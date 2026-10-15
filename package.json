@@ -7,8 +7,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "dev": "node scripts/dev.cjs",
+    "build:web": "expo export --platform web",
+    "start:server": "node server/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-game.cjs && node scripts/test-briefing.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs && node scripts/test-vault-dictionary.cjs && node scripts/test-vocabulary-test.cjs && node scripts/test-vocabulary-ui.cjs",
+    "test": "node scripts/test-server.cjs && node scripts/test-api-url.cjs && node scripts/test-game.cjs && node scripts/test-briefing.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs && node scripts/test-vault-dictionary.cjs && node scripts/test-vocabulary-test.cjs && node scripts/test-vocabulary-ui.cjs",
     "voices:generate": "node scripts/generate-arrival-voices.cjs"
   },
   "dependencies": {
@@ -23,12 +26,14 @@
     "react-native": "0.74.5",
     "react-native-svg": "15.2.0",
     "react-native-web": "~0.19.10",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~18.2.45",
     "typescript": "~5.3.3"
   },
-  "private": true
+  "private": true,
+  "engines": { "node": ">=18" }
 }

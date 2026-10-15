@@ -1,8 +1,6 @@
-// Expo substitutes these static accesses when bundling.
-declare const process: { env: { EXPO_PUBLIC_GEMINI_API_KEY?: string; EXPO_PUBLIC_GEMINI_LIVE_MODEL?: string } };
+import {geminiLiveSocketUrl} from './apiUrl';
 declare const __DEV__: boolean;
 let nextLiveSession = 0;
-export const hasGeminiKey = Boolean((process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim());
 export interface LiveCallbacks {
   onReady: () => void; onStart: () => void; onText: (text: string) => void;
   onComplete: () => void; onSpeechUnavailable?:()=>void; onAudioBlocked?: () => void; onError: (message: string) => void;
@@ -31,8 +29,6 @@ export class GeminiLiveClient {
     this.log('connect', {voiceName});
     this.callbacks = callbacks;
     this.active = true;
-    const key = (process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim();
-    if (!key) { callbacks.onError('음성 연결용 API 키가 없습니다. 연습 모드로 시작할 수 있어요.'); return; }
     if (typeof window === 'undefined' || !(window.AudioContext || (window as any).webkitAudioContext)) {
       callbacks.onError('이 버전의 실시간 음성은 웹 브라우저에서 지원합니다. 모바일에서는 텍스트 연습을 이용해 주세요.'); return;
     }
@@ -44,8 +40,8 @@ export class GeminiLiveClient {
       this.output.connect(this.audio!.destination);
       await this.audio!.resume();
       if (!this.active) return;
-      const model = (process.env.EXPO_PUBLIC_GEMINI_LIVE_MODEL || 'gemini-3.8-live').replace(/^models\//, '');
-      const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`);
+      const model = 'gemini-3.8-live';
+      const ws = new WebSocket(geminiLiveSocketUrl('gemini-3.8-live'));
       this.ws = ws;
       this.setupTimer = setTimeout(() => { if (this.active && !this.ready) callbacks.onError('손님과 연결되지 않았어요. 연습 모드로 이어갈 수 있습니다.'); }, 12000);
       ws.onopen = () => {

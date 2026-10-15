@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const fs = require('node:fs');
 const vm = require('node:vm');
-function load(path, resolve = require) {
+function load(path, resolve = name => name === './apiUrl' ? {apiUrl:value=>value,geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'} : require(name)) {
   const output = ts.transpileModule(fs.readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} }; vm.runInNewContext(output, { module, exports: module.exports, require: resolve, setTimeout, clearTimeout }); return module.exports;
 }
@@ -234,7 +234,7 @@ console.log('PASS: arrival input validation, taxi-to-cafe sequence, single playe
 {
   const source=ts.transpileModule(fs.readFileSync('src/core/geminiLive.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
   const mod={exports:{}};let completed=0;
-  vm.runInNewContext(source,{exports:mod.exports,process:{env:{}},setTimeout:fn=>{fn();return 1;},clearTimeout});
+  vm.runInNewContext(source,{exports:mod.exports,require:()=>({geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'}),setTimeout:fn=>{fn();return 1;},clearTimeout});
   const live=new mod.exports.GeminiLiveClient();
   live.output={gain:{value:1}};live.audio={state:'running'};live.active=true;live.generating=true;live.callbacks={onComplete:()=>completed++};
   live.setSoundEnabled(false);assert.equal(live.output.gain.value,0);assert.equal(completed,0);

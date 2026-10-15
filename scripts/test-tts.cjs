@@ -8,7 +8,7 @@ class Audio {
   async decodeAudioData(bytes){assert.equal(Buffer.from(bytes).toString(),'WAV');return {};}
   createBufferSource(){return {connect(){},start(){setImmediate(()=>this.onended?.());},stop(){this.onended?.();}};}
 }
-vm.runInNewContext(source,{module:mod,exports:mod.exports,require,process:{env:{EXPO_PUBLIC_GEMINI_API_KEY:'test'}},window:{AudioContext:Audio},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return respond(url,options);},setTimeout,clearTimeout,AbortController,atob});
+vm.runInNewContext(source,{module:mod,exports:mod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:require(name),window:{AudioContext:Audio},fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return respond(url,options);},setTimeout,clearTimeout,AbortController,atob});
 const {GeminiTtsClient,customerVoice,CUSTOMER_VOICES}=mod.exports;
 const castModule={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/scenarios/customers.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:castModule,exports:castModule.exports,require});

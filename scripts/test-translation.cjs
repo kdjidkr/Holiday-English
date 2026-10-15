@@ -11,7 +11,7 @@ const react = {
 };
 const mod={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/useTranslation.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText, {
-  module:mod,exports:mod.exports,require:()=>react,process:{env:{EXPO_PUBLIC_GEMINI_API_KEY:'test'}},AbortController,setTimeout,clearTimeout,
+  module:mod,exports:mod.exports,require:name=>name==='react'?react:{apiUrl:value=>value},AbortController,setTimeout,clearTimeout,
   fetch:(_url,options)=>new Promise(resolve=>requests.push({sentence:JSON.parse(options.body).contents[0].parts[0].text,signal:options.signal,resolve})),
 });
 const {splitDialogueSentences,useTranslation}=mod.exports;

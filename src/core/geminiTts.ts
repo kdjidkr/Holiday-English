@@ -1,6 +1,6 @@
 import type { LiveCallbacks } from './geminiLive';
 import type { CustomerPersona } from '../scenarios/types';
-declare const process: { env: { EXPO_PUBLIC_GEMINI_API_KEY?: string; EXPO_PUBLIC_GEMINI_CHAT_MODEL?: string; EXPO_PUBLIC_GEMINI_TTS_MODEL?: string } };
+import {apiUrl} from './apiUrl';
 
 // Explicit cast assignments. Voices are shared only after the available same-gender pool is exhausted.
 export const CUSTOMER_VOICES: Record<string, {name:string; gender:string}> = {
@@ -105,10 +105,8 @@ export class GeminiTtsClient {
     this.history.push({role:'user',parts:[{text}]});
     this.callbacks.onStart();
     void (async()=>{
-      const key=(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim();
-      const model=process.env.EXPO_PUBLIC_GEMINI_CHAT_MODEL || 'gemini-3.5-flash-lite';
-      const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
-        method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},
+      const response=await fetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
+        method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
         body:JSON.stringify({systemInstruction:{parts:[{text:this.instruction}]},contents:this.history.slice(-19),generationConfig:{temperature:0.7,maxOutputTokens:512,thinkingConfig:{thinkingLevel:'minimal'}}}),
       });
       if(!response.ok)throw new Error(`대사를 불러오지 못했어요 (${response.status}).`);
@@ -124,9 +122,9 @@ export class GeminiTtsClient {
       if(!this.sound){finish();return;}
       const audioTimeout=setTimeout(()=>controller.abort(),18000);
       try {
-        const speech=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
-          method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},
-          body:JSON.stringify({model:process.env.EXPO_PUBLIC_GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts',input:[{type:'user_input',content:[{type:'text',text:line,annotations:[{type:'speech_metadata',style:this.style}]}]}],response_format:{type:'audio'},generation_config:{speech_config:[{voice:this.voice}]}}),
+        const speech=await fetch(apiUrl('/api/gemini/interactions'),{
+          method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({model:'gemini-3.8-flash-lite-tts',input:[{type:'user_input',content:[{type:'text',text:line,annotations:[{type:'speech_metadata',style:this.style}]}]}],response_format:{type:'audio'},generation_config:{speech_config:[{voice:this.voice}]}}),
         });
         if(!speech.ok)throw new Error('TTS unavailable');
         const payload=await speech.json();

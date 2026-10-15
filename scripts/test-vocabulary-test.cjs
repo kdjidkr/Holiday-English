@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),ts=require('typescript');
 function load(path,extras={}){const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:m,exports:m.exports,...extras});return m.exports;}
 const flash=load('src/core/flashcards.ts'),frames=load('src/core/sentenceFrames.ts');let responseValue,request;
-const api=load('src/core/vocabularyTest.ts',{require:name=>name==='./flashcards'?flash:frames,process:{env:{EXPO_PUBLIC_GEMINI_API_KEY:'test'}},fetch:async(url,options)=>{request=JSON.parse(options.body);if(url==='/api/jev')return {ok:true,json:async()=>responseValue};assert.match(url,/gemini-3.5-flash-lite/);return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(responseValue)}]}}]})};}});
+const api=load('src/core/vocabularyTest.ts',{require:name=>name==='./flashcards'?flash:name==='./sentenceFrames'?frames:{apiUrl:value=>value},fetch:async(url,options)=>{request=JSON.parse(options.body);if(url==='/api/jev')return {ok:true,json:async()=>responseValue};assert.equal(url,'/api/gemini/models/gemini-3.5-flash-lite:generateContent');return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(responseValue)}]}}]})};}});
 const word={id:'word',shiftDay:1,englishTemplate:'quiet',koreanMeaning:'한산한',expressionKind:'word',slotExamples:[]};
 const question={korean:'카페가 꽤 한산해요.',prefix:'The cafe is pretty ',suffix:'.',answer:'quiet'};
 (async()=>{

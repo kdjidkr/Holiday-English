@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const env = fs.existsSync(path.join(root, '.env')) ? fs.readFileSync(path.join(root, '.env'), 'utf8') : '';
-const key = process.env.GEMINI_API_KEY || env.match(/^EXPO_PUBLIC_GEMINI_API_KEY\s*=\s*["']?([^\s"']+)/m)?.[1];
+const key = process.env.GEMINI_API_KEY || env.match(/^GEMINI_API_KEY\s*=\s*["']?([^\s"']+)/m)?.[1];
 const model = 'gemini-2.5-flash-preview-tts';
 const context = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, 'src/arrival/story.ts'), 'utf8'), {
@@ -23,7 +23,7 @@ function wav(pcm, rate) {
   return Buffer.concat([header, pcm]);
 }
 async function main() {
-  if (!key) throw new Error('GEMINI_API_KEY or EXPO_PUBLIC_GEMINI_API_KEY is required');
+  if (!key) throw new Error('GEMINI_API_KEY is required');
   fs.mkdirSync(directory, { recursive: true });
   for (const [beat, scene] of Object.entries(context.exports.arrivalLines)) {
     if (beat === 'BOARDING') continue;

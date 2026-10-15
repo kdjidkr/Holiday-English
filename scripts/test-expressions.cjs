@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require(
 const frames={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/sentenceFrames.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:frames,exports:frames.exports});
 const mod={exports:{}};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/expressionAnalysis.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,require:()=>frames.exports,process:{env:{}}});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/expressionAnalysis.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:frames.exports});
 const {validateExpressionTips,expressionToPattern}=mod.exports;
 const source='What are you up to after work? It is chilly today.';
 const selection={source,selected:'up',start:13,end:15};

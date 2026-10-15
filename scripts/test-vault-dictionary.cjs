@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 const load=(path,extra={})=>{const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:m,exports:m.exports,...extra});return m.exports;};
 const cards=load('src/core/flashcards.ts');let requests=[],answers=[];
-const dict=load('src/core/vaultDictionary.ts',{require:()=>cards,fetch:async(url,options)=>{assert.equal(url,'/api/jev');requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({answers:answers.shift()})};}});
+const dict=load('src/core/vaultDictionary.ts',{require:name=>name==='apiUrl'?{apiUrl:value=>value}:name==='./apiUrl'?{apiUrl:value=>value}:cards,fetch:async(url,options)=>{assert.equal(url,'/api/jev');requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({answers:answers.shift()})};}});
 const note=(id,english,meaning,day=1,source='Example')=>({id,englishTemplate:english,koreanMeaning:meaning,expressionKind:english.includes(' ')?'phrase':'word',shiftDay:day,sourceQuote:source,sourceKorean:'번역',slotExamples:[]});
 (async()=>{
  const old={...note('r1','ripper','아주 멋진',6,'What a ripper day!'),starred:true},incoming=note('r2','ripper','훌륭한',7,'That was a ripper game!');

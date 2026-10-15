@@ -21,7 +21,7 @@ export function verifiedSuggestions(candidates:ExpressionSuggestion[],answers:Re
 }
 async function decide(state:unknown,questions:Record<string,unknown>,signal:AbortSignal) {
   const started=Date.now();
-  const response=await fetch('/api/jev',{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'jev-latest',state,questions})});
+  const response=await fetch(apiUrl('/api/jev'),{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'jev-latest',state,questions})});
   logSuggestionEvent('response',{questions:Object.keys(questions),status:response.status,elapsedMs:Date.now()-started});
   if(!response.ok)throw new Error(`Suggestion unavailable: HTTP ${response.status}`);
   const data=await response.json();logSuggestionEvent('answers',{model:data.model,answers:data.answers,usage:data.usage});return data.answers || {};
@@ -48,3 +48,4 @@ export async function suggestExpressions(context:SuggestionContext,patterns:Lear
   const answers=await decide({context,candidates:Object.fromEntries(chosen.map((item,index)=>[`candidate_${index}`,item]))},questions,signal);
   const result=signal.aborted?[]:verifiedSuggestions(chosen,answers);logSuggestionEvent('verification',{threshold:SUGGESTION_THRESHOLD,candidates:chosen.map((item,index)=>({english:item.english,probability:answers[`suitable_${index}`]?.noul})),shown:result.map(item=>item.english)});return result;
 }
+import {apiUrl} from './apiUrl';
