@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-game.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs",
+    "test": "node scripts/test-game.cjs && node scripts/test-briefing.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs && node scripts/test-vault-dictionary.cjs && node scripts/test-vocabulary-test.cjs && node scripts/test-vocabulary-ui.cjs",
     "voices:generate": "node scripts/generate-arrival-voices.cjs"
   },
   "dependencies": {

@@ -1,10 +1,10 @@
 import { BottomTabs } from './src/components/BottomTabs';
-import { createShiftBriefing } from './src/scenarios/dailyEvents';
+import { generateShiftBriefing } from './src/core/shiftBriefing';
 import type { DailyEvent } from './src/scenarios/types';
 import { useScreenHeight } from './src/components/useScreenHeight';
 import { Journal } from './src/components/Journal';
 import { appStyles as s } from './src/components/appStyles';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StatusBar, Text, TextInput, View } from 'react-native';
 import { ArrivalConversation } from './src/components/ArrivalConversation';
@@ -36,7 +36,22 @@ export default function App() {
   const [record, setRecord] = useState<ShiftRecord | null>(null);
   const [pattern, setPattern] = useState<LearnedPattern | null>(null);
   const [briefing,setBriefing]=useState<DailyEvent|null>(null);
-  const beginShift=()=>{if(!briefing)return;setEnglishVisible(true);store.setTranslationEnabled(true);const event=briefing;setBriefing(null);game.start(store.voiceMode || 'live',event);};
+  const [briefingOpen,setBriefingOpen]=useState(false);
+  const [briefingError,setBriefingError]=useState('');
+  const [briefingRetry,setBriefingRetry]=useState(0);
+  useEffect(()=>{
+    if(!store.hydrated || !store.userProfile.isOnboarded || g.running || g.summary)return;
+    let active=true;const day=store.currentShiftDay;
+    if(store.preparedBriefing?.day===day && store.preparedBriefing.event.briefing?.length===2 && store.preparedBriefing.event.briefingEnglish?.length===2){setBriefing(store.preparedBriefing.event);setBriefingError('');return;}
+    setBriefing(null);setBriefingError('');
+    generateShiftBriefing(day,store.shiftHistory).then(event=>{if(active){store.savePreparedBriefing(day,event);setBriefing(event);}}).catch(()=>{if(active)setBriefingError('브리핑을 준비하지 못했어요. 다시 시도해 주세요.');});
+    return ()=>{active=false;};
+  },[store.hydrated,store.userProfile.isOnboarded,store.currentShiftDay,g.running,!!g.summary,briefingRetry]);
+  const beginShift=()=>{if(!briefing)return;setEnglishVisible(true);store.setTranslationEnabled(true);const event=briefing;setBriefingOpen(false);game.start(store.voiceMode || 'live',event);};
+  const [reviewStatus,setReviewStatus]=useState<{id:string;loading:boolean}|null>(null);
+  const reviewId=g.summary?.id;
+  const onReviewLoading=useCallback((loading:boolean)=>{if(reviewId)setReviewStatus({id:reviewId,loading});},[reviewId]);
+  const reviewLoading=!!reviewId && (reviewStatus?.id!==reviewId || reviewStatus.loading);
   const [exitConfirm, setExitConfirm] = useState(false);
   const customer = g.customers[g.index];
   const regulars = Object.values(store.relationships).filter(r => r.status === 'REGULAR').length;
@@ -66,7 +81,7 @@ export default function App() {
       {g.running && customer ? <>
         <View style={[s.stage,{height:keyboardOpen ? 104 : Math.max(150,Math.min(height*.29,250))}]}>
           <CafeScene customer={customer} phase={g.phase} talking={g.talking} ready={ready} weather={g.event?.weather} gender={store.userProfile.gender} />
-          <View style={s.dayPill}><Text style={s.dayText}>DAY {store.currentShiftDay} · {g.index+1} / 3</Text></View>
+          <View style={s.dayPill}><Text style={s.dayText}>DAY {store.currentShiftDay} · {g.index+1} / {g.customers.length}</Text></View>
           {relation?.status === 'REGULAR' && <View style={s.friendPill}><Text style={s.dayText}>♥ 단골</Text></View>}
         </View>
         <View style={s.orderBar}><Text style={s.orderIcon}>☕</Text><Text numberOfLines={1} style={s.orderLabel}>{customer.preferredOrder.menuName}</Text><Text style={s.orderStatus}>{['FAREWELL','DEPARTING'].includes(g.phase) ? '전달 완료' : ready ? '준비 완료' : ['ARRIVING','ORDERING','AWAITING_ORDER'].includes(g.phase)?'주문 확인':`${Math.max(0,g.prepSeconds-g.seconds)}초`}</Text></View>
@@ -102,16 +117,16 @@ export default function App() {
         <ScrollView contentContainerStyle={s.summaryContent}>
           <Text style={s.panelEyebrow}>DAY {g.summary.day} · 영업 끝</Text><Text style={s.heading}>오늘도 잘했어요.</Text>
           <View style={s.resultRow}>{g.summary.sessions.map(session=><View key={session.customer.id} style={s.resultPerson}><CustomerPortrait customer={session.customer} size={62}/><Text style={s.customerName}>{session.customer.name}</Text><Text style={s.tiny}>{g.summary!.newRegularIds.includes(session.customer.id)?'새 단골 ♥':'또 만나요'}</Text></View>)}</View>
-          <ShiftReview record={g.summary}/>
+          <ShiftReview key={g.summary.id} record={g.summary} onLoadingChange={onReviewLoading}/>
           <Pressable accessibilityRole="button" onPress={()=>{openBook('history');setRecord(g.summary);}} style={s.textAction}><Text style={s.subLink}>오늘의 대화 다시 읽기 ↗</Text></Pressable>
         </ScrollView>
-        <View style={s.bottomAction}><Button onPress={game.clearSummary}>카페로 돌아가기</Button></View>
+        <View style={s.bottomAction}><Button disabled={reviewLoading} onPress={game.clearSummary}>{reviewLoading?'복습 준비 중…':'카페로 돌아가기'}</Button></View>
       </> : <>
         <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
           <View style={s.homeHeading}><Text style={s.panelEyebrow}>브리즈번 · DAY {store.currentShiftDay}</Text><Text style={s.heroTitle}>{store.userProfile.englishNameAlphabet},<Text>{'\n'}오늘도 좋은 아침!</Text></Text></View>
           <View style={{height:Math.max(220,Math.min(height*.34,330)),marginHorizontal:16,borderRadius:32,overflow:'hidden'}}><CafeScene home gender={store.userProfile.gender}/></View>
           <View style={s.homeCaption}><Text style={s.subtitle}>커피 한 잔, 작은 이야기 하나.</Text><Pressable accessibilityRole="button" accessibilityLabel="단골 손님 보기" onPress={()=>openBook('customers')} style={s.regularLink}><Text style={s.regularText}>♥ 단골 {regulars}/20</Text></Pressable></View>
-          <View style={s.homeActions}><Button onPress={()=>setBriefing(createShiftBriefing(store.currentShiftDay))}>카페 문 열기 →</Button></View>
+          <View style={s.homeActions}><Button onPress={()=>setBriefingOpen(true)}>카페 문 열기 →</Button></View>
         </ScrollView>
         <BottomTabs active="work" onWork={()=>setBook(null)} onNotes={()=>openBook('vault')} />
       </>}
@@ -119,7 +134,7 @@ export default function App() {
       {!!store.saveError && <Text style={s.saveError}>{store.saveError}</Text>}
     </KeyboardAvoidingView>
     <Journal footer={book==='vault' && !g.running?<BottomTabs active="notes" onWork={()=>setBook(null)} onNotes={()=>openBook('vault')} />:undefined} book={book} setBook={setBook} record={record} setRecord={setRecord} pattern={pattern} setPattern={setPattern} />
-    <Modal visible={!!briefing} transparent animationType="fade" onRequestClose={()=>setBriefing(null)}>
+    <Modal visible={briefingOpen} transparent animationType="fade" onRequestClose={()=>setBriefingOpen(false)}>
       <View style={s.briefingShade}>
         <View style={s.briefingCard}>
           <View style={s.briefingHeader}>
@@ -127,21 +142,22 @@ export default function App() {
               <Text style={s.briefingDay}>DAY {store.currentShiftDay}</Text>
               <Text accessibilityRole="header" style={s.briefingTitle}>오늘의 브리핑</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="브리핑 취소" onPress={()=>setBriefing(null)} style={s.briefingClose}>
+            <Pressable accessibilityRole="button" accessibilityLabel="브리핑 취소" onPress={()=>setBriefingOpen(false)} style={s.briefingClose}>
               <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M6 6l12 12M18 6L6 18" stroke={C.ink} strokeWidth={2} strokeLinecap="round"/></Svg>
             </Pressable>
           </View>
           <ScrollView style={{flexShrink:1}} contentContainerStyle={s.briefingList}>
+            {!briefing && <Text style={s.briefingBody}>{briefingError || '오늘의 소식을 준비하고 있어요…'}</Text>}
             {briefing?.briefing?.map((item,index)=><View key={`${index}-${item}`} style={s.briefingItem}>
               <View style={[s.briefingIcon,{backgroundColor:['#F8E9C8','#E3EDE4','#E9E5F1'][index%3]}]}>
                 <Svg width={22} height={22} viewBox="0 0 24 24">
                   {index===0 ? briefing.weather==='rainy' ? <Path d="M6 15a4 4 0 010-8 6 6 0 0111-1 4.5 4.5 0 011 9M7 18l-1 3m6-3l-1 3m6-3l-1 3" stroke={C.ink} strokeWidth={1.6} fill="none" strokeLinecap="round"/> : <><Circle cx={12} cy={12} r={4} stroke={C.ink} strokeWidth={1.6} fill="none"/><Path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19" stroke={C.ink} strokeWidth={1.6} strokeLinecap="round"/></> : index===1 ? <><Rect x={4} y={5} width={16} height={16} rx={3} stroke={C.ink} strokeWidth={1.6} fill="none"/><Path d="M8 3v4m8-4v4M4 11h16m-11 5h6" stroke={C.ink} strokeWidth={1.6} strokeLinecap="round"/></> : <><Path d="M4 5h16v14H4zM8 9h8m-8 4h8m-8 3h5" stroke={C.ink} strokeWidth={1.6} fill="none" strokeLinejoin="round" strokeLinecap="round"/></>}
                 </Svg>
               </View>
-              <View style={{flex:1,minWidth:0,gap:4}}><Text style={s.briefingLabel}>{['날씨','오늘','동네 소식'][index] || '소식'}</Text><Text style={s.briefingBody}>{item}</Text></View>
+              <View style={{flex:1,minWidth:0,gap:4}}><Text style={s.briefingLabel}>{['날씨','동네 소식'][index] || '소식'}</Text><Text style={s.briefingBody}>{item}</Text>{!!briefing.briefingEnglish?.[index] && <Text style={s.briefingEnglish}>{briefing.briefingEnglish[index]}</Text>}</View>
             </View>)}
           </ScrollView>
-          <View style={s.briefingFooter}><Pressable accessibilityRole="button" onPress={beginShift} style={({pressed})=>[s.briefingStart,pressed && {opacity:0.85}]}><Text style={s.briefingStartText}>출근하기!</Text><Text style={s.briefingStartArrow}>→</Text></Pressable></View>
+          <View style={s.briefingFooter}><Pressable accessibilityRole="button" disabled={!briefing && !briefingError} onPress={briefingError?()=>{setBriefingError('');setBriefingRetry(n=>n+1);}:beginShift} style={({pressed})=>[s.briefingStart,!briefing && !briefingError && {opacity:.45},pressed && {opacity:0.85}]}><Text style={s.briefingStartText}>{briefingError?'다시 준비하기':'출근하기!'}</Text><Text style={s.briefingStartArrow}>→</Text></Pressable></View>
         </View>
       </View>
     </Modal>

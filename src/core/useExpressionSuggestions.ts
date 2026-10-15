@@ -4,7 +4,7 @@ import { ExpressionSuggestion, SuggestionContext, suggestExpressions, logSuggest
 export function useExpressionSuggestions(context:SuggestionContext,patterns:LearnedPattern[],enabled:boolean) {
   const [suggestions,setSuggestions]=useState<ExpressionSuggestion[]>([]);
   const revision=useRef(0),cache=useRef(new Map<string,ExpressionSuggestion[]>());
-  const key=JSON.stringify({context,patterns:patterns.map(item=>[item.id,item.englishTemplate,item.koreanMeaning,item.expressionKind,item.shiftDay])});
+  const key=JSON.stringify({context,patterns:patterns.map(item=>[item.id,item.englishTemplate,item.koreanMeaning,item.expressionKind,item.shiftDay,item.learningKind,item.frame])});
   useEffect(()=>{
     const id=++revision.current;setSuggestions([]);
     if(!enabled || !context.customerLine.trim() || !patterns.length){if(enabled)logSuggestionEvent('skipped',{hasLine:!!context.customerLine.trim(),notes:patterns.length});return;}

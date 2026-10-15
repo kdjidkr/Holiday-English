@@ -61,7 +61,8 @@ assert.notEqual(jackAlternative.preferredOrder.menuName,jack.preferredOrder.menu
 assert.equal(jackAlternative.id,jack.id);
 let favoriteRoll=[0.7];
 assert.equal(customerData.orderForVisit(jack,1,()=>favoriteRoll.shift()).preferredOrder.menuName,jack.preferredOrder.menuName);
-assert.equal(cafe.selectCustomers(1,{}).length,3);
+assert.equal(cafe.selectCustomers(1,{}).length,1);
+assert.equal(cafe.selectCustomers(7,{}).length,1);
 assert.equal(cafe.selectCustomers(1,{})[0].preferredOrder.menuName,jack.preferredOrder.menuName);
 assert.equal(handover.defaultHandoverGreeting({preferredOrder:{menuName:'Double Espresso + Banana Bread'}}).english,"Here's your double espresso and banana bread. Enjoy!");
 assert.throws(()=>handover.validateHandoverGreeting({english:'커피 나왔어요.',korean:'커피 나왔어요.'}));
@@ -135,7 +136,7 @@ const hookModule={exports:{}};
 const mocks = {
   react:{useState:init=>{rendered=init;return [init,next=>{rendered=next;}];},useRef:current=>({current}),useEffect:fn=>fn()},
   '../store/gameStore':{useGameStore:{getState:()=>persisted}},
-  '../scenarios/cafe':{selectCustomers:()=>people,selectVaultPatterns:cafe.selectVaultPatterns,recentCustomerSessions:cafe.recentCustomerSessions,buildSystemPromptForCustomer:cafe.buildSystemPromptForCustomer},
+  '../scenarios/cafe':{selectCustomers:()=>people.slice(0,1),selectVaultPatterns:cafe.selectVaultPatterns,recentCustomerSessions:cafe.recentCustomerSessions,buildSystemPromptForCustomer:cafe.buildSystemPromptForCustomer},
   '../scenarios/dailyEvents':{getRandomDailyEvent:()=>({title:'Sunny morning'})},
   './geminiLive':{GeminiLiveClient:MockLive},
   './geminiTts':{GeminiTtsClient:class extends MockLive {configureVoice(){}},customerVoice:ttsModule.customerVoice},
@@ -154,15 +155,10 @@ game.send('Thanks for the recommendation!');assert.equal(rendered.phase,'FAREWEL
 const finalTurns=rendered.dialogue.length;game.send('another turn');assert.equal(rendered.dialogue.length,finalTurns);
 assert.equal(rendered.dialogue.filter(t=>t.assisted).length,0);
 advance(1200);assert.equal(rendered.busy,false);advance(1200);assert.equal(rendered.phase,'DEPARTING');
-game.depart();advance(1400);assert.equal(rendered.index,1);
-for(let i=1;i<3;i++){
-  advance(4500);game.acceptOrder();advance(3200);advance(20000);
-  assert.equal(rendered.phase,'FAREWELL');advance(3800);
-}
+game.depart();advance(1400);
 assert.equal(rendered.running,false);assert.equal(persisted.shiftHistory.length,1);
-assert.equal(persisted.shiftHistory[0].sessions.length,3);
+assert.equal(persisted.shiftHistory[0].sessions.length,1);
 assert.ok(persisted.shiftHistory[0].sessions[0].dialogue.some(t=>t.speaker==='user' && t.text==='Thanks for the recommendation!'));
-assert.equal(persisted.shiftHistory[0].sessions[1].dialogue.some(t=>t.speaker==='user'),false); // Silence isn't invented speech.
 game.start('live');advance(2200);assert.equal(selectedVoice,ttsModule.customerVoice(people[0]).name);
 liveCallbacks.onStart();liveCallbacks.onText('Hello');liveCallbacks.onComplete();game.acceptOrder();
 game.send('Any weekend plans?');advance(10000);
@@ -184,10 +180,10 @@ game.setSelectionOpen(true);game.send("Here's your coffee.");
 const beforeDisconnect=disconnects;liveCallbacks.onText('Thank you, goodbye!');liveCallbacks.onComplete();
 assert.equal(disconnects,beforeDisconnect+1); // Reading a tip must not keep the Live connection open.
 const heldIndex=rendered.index;advance(60000);assert.equal(rendered.index,heldIndex);assert.equal(rendered.phase,'FAREWELL');
-game.setSelectionOpen(false);assert.equal(rendered.phase,'DEPARTING');advance(1400);assert.equal(rendered.index,heldIndex+1);
+game.setSelectionOpen(false);assert.equal(rendered.phase,'DEPARTING');advance(1400);assert.equal(rendered.running,false);assert.equal(rendered.summary.sessions.length,1);
 game.leave();
 console.log('PASS: selection holds farewell screen with Live disconnected; closing resumes departure');
-console.log('PASS: final 20-second turn after playback, timeout handover, one combined farewell, early explicit delivery, no invented player speech, stale callbacks and complete shift');
+console.log('PASS: final 20-second turn after playback, timeout handover, one combined farewell, early explicit delivery, no invented player speech, stale callbacks and complete single-customer shift');
 
 (async () => {
   let time=0, next=0, resolveCheck;

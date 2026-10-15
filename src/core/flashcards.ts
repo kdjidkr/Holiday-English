@@ -1,16 +1,17 @@
 import type { LearnedPattern } from '../scenarios/types';
-export type NoteKind='word'|'phrase'|'sentence';
-export const NOTE_KINDS: {id:NoteKind;label:string}[]=[{id:'word',label:'단어'},{id:'phrase',label:'표현'},{id:'sentence',label:'문장'}];
+export type NoteKind='word'|'phrase'|'sentence'|'frame';
+export const NOTE_KINDS: {id:NoteKind;label:string}[]=[{id:'word',label:'단어'},{id:'phrase',label:'표현'},{id:'sentence',label:'문장'},{id:'frame',label:'문장 틀'}];
 export function classifyNote(item:LearnedPattern):NoteKind {
+  if(item.learningKind==='frame')return 'frame';
   if(item.expressionKind)return item.expressionKind;
   if(/[.!?…]["')\]]*$/u.test(item.englishTemplate.trim()))return 'sentence';
   return (item.selectedText || item.englishTemplate).trim().split(/\s+/).length===1?'word':'phrase';
 }
-export function noteDays(notes:LearnedPattern[]):number[] {return [...new Set(notes.map(n=>n.shiftDay))].sort((a,b)=>a-b);}
+export function noteDays(notes:LearnedPattern[]):number[] {return [...new Set(notes.flatMap(n=>n.occurrences?.length?n.occurrences.map(o=>o.day):[n.shiftDay]))].sort((a,b)=>a-b);}
 export function selectCards(notes:LearnedPattern[],kinds:NoteKind[],days:number[]):LearnedPattern[] {
   const seen=new Set<string>();
   return notes.filter(n=>{
-    if(!kinds.includes(classifyNote(n)) || !days.includes(n.shiftDay) || !n.englishTemplate.trim() || !n.koreanMeaning.trim() || seen.has(n.id))return false;
+    if(!kinds.includes(classifyNote(n)) || !(n.occurrences?.length?n.occurrences.some(o=>days.includes(o.day)):days.includes(n.shiftDay)) || !n.englishTemplate.trim() || !n.koreanMeaning.trim() || seen.has(n.id))return false;
     seen.add(n.id);return true;
   });
 }
@@ -18,7 +19,7 @@ export function shuffleCards(cards:LearnedPattern[],random:()=>number=Math.rando
   const result=[...cards];for(let i=result.length-1;i>0;i--){const j=Math.min(i,Math.floor(random()*(i+1)));[result[i],result[j]]=[result[j],result[i]];}return result;
 }
 export interface CardSession {cards:LearnedPattern[];index:number;retry:LearnedPattern[];round:number;seen:string[];again:string[];done:boolean}
-export function startCards(cards:LearnedPattern[]):CardSession {return {cards,index:0,retry:[],round:1,seen:[],again:[],done:!cards.length};}
+export function startCards(cards:LearnedPattern[]):CardSession {return {cards:[...cards],index:0,retry:[],round:1,seen:[],again:[],done:!cards.length};}
 export function rateCard(session:CardSession,known:boolean):CardSession {
   if(session.done)return session;
   const card=session.cards[session.index];
@@ -34,4 +35,9 @@ export function skipCard(session:CardSession):CardSession {
   if(session.index+1<session.cards.length)return {...session,index:session.index+1};
   if(session.retry.length)return {...session,cards:session.retry,index:0,retry:[],round:session.round+1};
   return {...session,done:true};
+}
+
+export function framePractice(card:LearnedPattern,round:number):{english:string;korean:string} {
+  const variations=card.learningKind==='frame'?card.frame?.variations:undefined;
+  return variations?.length ? variations[(Math.max(1,round)-1)%variations.length] : {english:card.englishTemplate,korean:card.koreanMeaning};
 }

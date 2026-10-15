@@ -1,6 +1,8 @@
 const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const frames={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/sentenceFrames.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:frames,exports:frames.exports});
 const mod={exports:{}};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/expressionAnalysis.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,process:{env:{}}});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/expressionAnalysis.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,require:()=>frames.exports,process:{env:{}}});
 const {validateExpressionTips,expressionToPattern}=mod.exports;
 const source='What are you up to after work? It is chilly today.';
 const selection={source,selected:'up',start:13,end:15};
@@ -25,3 +27,32 @@ assert.equal(original.slice(chosen.start,chosen.end),chosen.selected);assert.equ
 assert.equal(mobile.wordSelection(original,0,words.length-1).selected,"G'day!  What are you up to?\nNice day.");
 assert.equal(mobile.wordSelection('',0,0),null);assert.equal(mobile.wordSelection(original,2,1),null);
 console.log('PASS: mobile whole-word ranges preserve apostrophes, whitespace, line breaks and original dialogue offsets');
+
+const proposal={template:"It's a bit [상태].",meaning:'조금 ~하네요.',slotHint:'상태를 나타내는 형용사',variations:[{english:"It's a bit chilly.",korean:'조금 쌀쌀하네요.'},{english:"It's a bit busy.",korean:'조금 바쁘네요.'}]};
+assert.ok(frames.exports.validateFrame(proposal));
+assert.equal(frames.exports.frameFitsSource(proposal,"Yes, it's a bit smoky."),true);
+assert.equal(frames.exports.frameFitsSource(proposal,'I prefer oat milk.'),false);
+assert.equal(frames.exports.validateFrame({...proposal,variations:[proposal.variations[0],{english:'It is very busy.',korean:'바빠요.'}]}),undefined);
+assert.equal(frames.exports.validateFrame({...proposal,template:'[아무거나]'}),undefined);
+const fp=frames.exports.frameToPattern(proposal,3,"It's a bit smoky.",'Jack');
+assert.equal(fp.learningKind,'frame');assert.equal(fp.shiftDay,3);assert.equal(fp.sourceQuote,"It's a bit smoky.");
+assert.equal(fp.id,frames.exports.frameToPattern(proposal,8,'Different context','Emma').id);
+const frameSource="It's a bit smoky.";
+const frameSelection={source:frameSource,selected:'bit',start:7,end:10};
+const explained=validateExpressionTips({expressions:[{...phrase,surface:'bit',expression:'a bit',frame:proposal}]},frameSelection);
+assert.equal(explained[0].frame.template,proposal.template);
+console.log('PASS: grounded optional frame proposals, fixed-template variations and explicit collectible frame storage');
+
+const translated=validateExpressionTips({sourceKorean:'퇴근 후에 뭐 할 예정이에요? 오늘은 쌀쌀하네요.',expressions:[phrase]},selection)[0];
+assert.equal(expressionToPattern(translated,selection,4,'Jack').sourceKorean,'퇴근 후에 뭐 할 예정이에요? 오늘은 쌀쌀하네요.');
+assert.equal(validateExpressionTips({sourceKorean:'English only',expressions:[phrase]},selection)[0].sourceKorean,undefined);
+assert.equal(expressionToPattern(phrase,selection,1,'Jack').sourceKorean,undefined);
+assert.equal(frames.exports.frameToPattern(proposal,3,frameSource,'Jack','조금 연기가 자욱하네요.').sourceKorean,'조금 연기가 자욱하네요.');
+console.log('PASS: full-source Korean persists with selected expressions and frames; legacy notes remain compatible');
+
+const selectionSource="It's a bit smoky. I was worried it might get busy.";
+const worriedAt=selectionSource.indexOf('worried');
+assert.equal(frames.exports.frameFitsSelection(proposal,selectionSource,worriedAt,worriedAt+7),false);
+const smokyAt=selectionSource.indexOf('smoky');
+assert.equal(frames.exports.frameFitsSelection(proposal,selectionSource,smokyAt,smokyAt+5),true);
+console.log('PASS: frames overlap selected fixed words or slot content; unrelated sentence frames rejected');

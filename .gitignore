@@ -1,7 +1,5 @@
 node_modules/
 .expo/
 dist/
-.env
-.env.*
-!.env.example
+.env*
 .DS_Store

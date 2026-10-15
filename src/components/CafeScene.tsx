@@ -79,7 +79,7 @@ export function CustomerPortrait({ customer, size = 70 }: { customer: CustomerPe
   return <Svg width={size} height={size} viewBox="-80 -120 160 160"><Circle cx="0" cy="-40" r="78" fill="#E8DEC6" /><Character seed={customer.avatarSeed} gender={customer.gender} happy /></Svg>;
 }
 export function PlayerPortrait({ gender, size = 80 }: { gender: 'MALE' | 'FEMALE'; size?: number }) {
-  return <Svg width={size} height={size} viewBox="-80 -120 160 160"><Circle cx="0" cy="-40" r="78" fill="#C9D5B8" /><Character seed={gender === 'FEMALE' ? 'player_female' : 'player_male'} happy /></Svg>;
+  return <View style={{width:size,height:size,borderRadius:size/2,overflow:'hidden',backgroundColor:'#C9D5B8'}}><Image source={gender==='FEMALE'?homePortraits.FEMALE:homePortraits.MALE} resizeMode="contain" style={{width:'100%',height:'100%'}} /></View>;
 }
 function Plant({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   return <G transform={`translate(${x},${y}) scale(${scale})`}>
@@ -92,7 +92,6 @@ function Plant({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
 }
 export function CafeScene({ customer, phase = 'CHATTING', talking = false, ready = false, home = false, weather = 'sunny', gender = 'FEMALE' }: { customer?: CustomerPersona; phase?: SessionPhase; talking?: boolean; ready?: boolean; home?: boolean; weather?: DailyEvent['weather']; gender?: string }) {
   const { width } = useWindowDimensions();
-  const compact = true;
   const position = useRef(new Animated.Value(0)).current;
   const bob = useRef(new Animated.Value(0)).current;
   const cup = useRef(new Animated.Value(0)).current;
@@ -121,11 +120,11 @@ export function CafeScene({ customer, phase = 'CHATTING', talking = false, ready
       <Path d="M-16 213 Q36 163 83 196 Q123 160 152 183 V254 H-16Z" fill="#80ADA1" />
       <Path d="M-16 238 Q67 197 152 221 V254 H-16Z" fill="#4E8477" />
       <Path d="M70 50V254 M-16 179H152" stroke="#FFFCF7" strokeWidth="9" />
-      <Rect x="193" y="52" width="160" height="89" rx="24" fill="#FFFCF7" />
-      <Circle cx="226" cy="96" r="17" fill="#F6C45D" />
-      <Path d="M226 72V66 M226 126V120 M202 96H196 M256 96H250" stroke="#D39A37" strokeWidth="3" strokeLinecap="round" />
-      <SvgText x="290" y="91" fontSize="18" fontWeight="800" fill="#28352F" textAnchor="middle">sunny</SvgText>
-      <SvgText x="290" y="113" fontSize="18" fontWeight="800" fill="#28352F" textAnchor="middle">side</SvgText>
+      <Rect x="193" y="24" width="160" height="68" rx="20" fill="#FFFCF7" />
+      <Circle cx="226" cy="58" r="14" fill="#F6C45D" />
+      <Path d="M226 38V34 M226 82V78 M206 58H202 M250 58H246" stroke="#D39A37" strokeWidth="3" strokeLinecap="round" />
+      <SvgText x="290" y="55" fontSize="14" fontWeight="800" fill="#28352F" textAnchor="middle">sunny</SvgText>
+      <SvgText x="290" y="73" fontSize="14" fontWeight="800" fill="#28352F" textAnchor="middle">side</SvgText>
       <Rect x="379" y="70" width="122" height="183" rx="58" fill="#F6F2E6" />
       <Rect x="391" y="81" width="98" height="172" rx="48" fill="#A9C4A1" />
       <Path d="M391 207 Q430 169 489 193V253H391Z" fill="#6D987C" />
@@ -134,8 +133,8 @@ export function CafeScene({ customer, phase = 'CHATTING', talking = false, ready
       <Rect x="197" y="153" width="23" height="28" rx="7" fill="#FFF9F0" /><Path d="M220 158Q237 156 230 172H220" fill="none" stroke="#FFF9F0" strokeWidth="5" />
       <Rect y="263" width="480" height="37" fill="#E6B590" />
     </Svg>
-    {home && <View pointerEvents="none" style={{position:'absolute',left:'38%',bottom:'8%',width:'40%',height:'83%'}}><Image source={gender === 'FEMALE' ? homePortraits.FEMALE : homePortraits.MALE} resizeMode="contain" style={{width:'100%',height:'100%'}} /></View>}
-    {customer && phase !== 'DONE' && <Animated.View pointerEvents="none" style={[styles.person, compact && { left: '29%', width: '42%', top: '-6%', height: '82%' }, { transform: [{ translateX: position }, { translateY: bob }] }]}>
+    {home && <View pointerEvents="none" style={{position:'absolute',left:'34%',bottom:'0%',width:'32%',height:'70%'}}><Image source={gender === 'FEMALE' ? homePortraits.FEMALE : homePortraits.MALE} resizeMode="contain" style={{width:'100%',height:'100%'}} /></View>}
+    {customer && phase !== 'DONE' && <Animated.View pointerEvents="none" style={[styles.person, { left: '29%', width: '42%', top: '0%', height: '82%' }, { transform: [{ translateX: position }, { translateY: bob }] }]}>
       {portraitFor(customer) ? <Image source={portraitFor(customer)} resizeMode="contain" style={{width:'100%',height:'100%'}} /> : <Svg width="100%" height="100%" viewBox="-110 -125 220 250"><Character seed={customer.avatarSeed} gender={customer.gender} talking={talking} happy={phase === 'FAREWELL' || phase === 'DEPARTING'} cup={phase === 'FAREWELL' || phase === 'DEPARTING'} /></Svg>}
     </Animated.View>}
     <Svg pointerEvents="none" width="100%" height="23%" viewBox="0 0 480 70" preserveAspectRatio="none" style={{position:'absolute',bottom:0}}>

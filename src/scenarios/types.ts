@@ -27,6 +27,7 @@ export interface CustomerPersona {
 
 export interface DailyEvent {
   briefing?: string[];
+  briefingEnglish?: string[];
   simulatedDate?: string;
   id: string;
   title: string;
@@ -36,11 +37,21 @@ export interface DailyEvent {
   suggestedOpening: string; // 예시 영어 오프닝 문장
 }
 
+export interface SentenceFrame {
+  slotHint: string;
+  variations: {english:string;korean:string}[];
+}
+export interface NoteOccurrence {savedId:string;day:number;english:string;meaning:string;sourceQuote?:string;sourceKorean?:string;speaker?:string;}
 export interface LearnedPattern {
+  lexemeKey?: string;
+  occurrences?: NoteOccurrence[];
+  learningKind?: 'frame';
+  frame?: SentenceFrame;
   starred?: boolean;
   id: string;
   shiftDay: number;
   sourceQuote?: string;
+  sourceKorean?: string;
   selectedText?: string;
   expressionKind?: 'word' | 'phrase';
   explanation?: string;
@@ -53,11 +64,12 @@ export interface LearnedPattern {
 }
 
 export interface ShiftReviewCard {
+  sourceKorean?: string;
   sessionIndex: number;
   turnIndex: number;
   koreanSentence: string;
   kind: 'polish' | 'alternative' | 'good';
   note: string;
-  expressions: { english: string; koreanMeaning: string; explanation: string }[];
+  expressions: { english: string; koreanMeaning: string; explanation: string; frame?: SentenceFrame & {template:string;meaning:string} }[];
 }
 

@@ -1,6 +1,8 @@
 const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const frames={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/sentenceFrames.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:frames,exports:frames.exports});
 const mod={exports:{}};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/shiftReview.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,process:{env:{}},fetch:()=>{throw Error('No network expected');}});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/shiftReview.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,require:()=>frames.exports,process:{env:{}},fetch:()=>{throw Error('No network expected');}});
 const {validateShiftReview,reviewContext,reviewExpressionToPattern,generateShiftReview}=mod.exports;
 const record={id:'shift-test',day:4,sessions:[{customer:{name:'Jack'},dialogue:[{speaker:'customer',text:'How long have you worked here?'},{speaker:'user',text:'I work here since two weeks.'},{speaker:'customer',text:'Welcome to Brisbane!'},{speaker:'user',text:'Help',rescue:true}]}]};
 const card={sessionIndex:0,turnIndex:1,koreanSentence:'이곳에서 일한 지 2주 됐어요.',kind:'polish',note:'기간을 나타내는 for와 현재완료를 사용해요.',expressions:[{english:'I have been working here for two weeks.',koreanMeaning:'이곳에서 일한 지 2주 됐어요.',explanation:'for는 기간을 나타내요.'},{english:'I started working here two weeks ago.',koreanMeaning:'2주 전에 여기서 일하기 시작했어요.',explanation:'시작 시점을 말하는 다른 표현이에요.'}]};
@@ -15,3 +17,14 @@ const changedGood=validateShiftReview({cards:[{...card,kind:'good',note:"'unrela
 assert.equal(changedGood.kind,'alternative');assert.equal(changedGood.note.includes('unrelated expression'),false);
 assert.equal(validateShiftReview({cards:[]},record).length,0);
 generateShiftReview({...record,sessions:[{dialogue:[{speaker:'customer',text:'Hi!'},{speaker:'user',text:'',rescue:true}]}]},new AbortController().signal).then(result=>{assert.equal(result.length,0);console.log('PASS: review grounded in actual user turns, rescue exclusion, contextual dialogue, individual expression storage, sparse-shift handling');}).catch(error=>{console.error(error);process.exitCode=1;});
+
+const proposed={template:'I have been [활동] for [기간].',meaning:'~한 지 ~됐어요.',slotHint:'활동에는 동사-ing, 기간에는 기간 표현을 넣어요.',variations:[{english:'I have been working here for two weeks.',korean:'여기서 일한 지 2주 됐어요.'},{english:'I have been living here for a month.',korean:'여기서 산 지 한 달 됐어요.'}]};
+const reviewed=validateShiftReview({cards:[{...card,expressions:[{...card.expressions[0],frame:proposed}]}]},record);
+assert.equal(reviewed[0].expressions[0].frame.template,proposed.template);
+assert.equal(reviewed[0].turnIndex,1);
+console.log('PASS: optional frames coexist with grounded shift-review alternatives and old saved reviews');
+
+const translatedReview=validateShiftReview({cards:[{...card,sourceKorean:'여기서 일한 지 2주 됐어요.'}]},record)[0];
+assert.equal(reviewExpressionToPattern(record,translatedReview,0).sourceKorean,'여기서 일한 지 2주 됐어요.');
+assert.equal(reviewExpressionToPattern(record,card,0).sourceKorean,undefined);
+console.log('PASS: review keeps original utterance Korean separate from alternative expression meaning');

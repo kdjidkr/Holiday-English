@@ -211,49 +211,79 @@ const coffees = [
   { menuName: "Large Latte with Caramel", prepDurationSeconds: 90, desc: "카라멜 라떼" },
   { menuName: "Long Black", prepDurationSeconds: 45, desc: "롱블랙" },
   { menuName: "Mocha with Marshmallow", prepDurationSeconds: 100, desc: "마시멜로 모카" },
-  { menuName: "Magic (Double Ristretto Flat White)", prepDurationSeconds: 85, desc: "매직 커피" }
+  { menuName: "Magic (Double Ristretto Flat White)", prepDurationSeconds: 85, desc: "매직 커피" },
+  { menuName: "Cappuccino", prepDurationSeconds: 90, desc: "카푸치노" },
+  { menuName: "Piccolo Latte", prepDurationSeconds: 60, desc: "피콜로 라떼" },
+  { menuName: "Cold Brew", prepDurationSeconds: 40, desc: "콜드브루" },
+  { menuName: "Iced Long Black", prepDurationSeconds: 45, desc: "아이스 롱블랙" },
+  { menuName: "Iced Latte (Oat milk)", prepDurationSeconds: 55, desc: "오트밀크 아이스 라떼" },
+  { menuName: "Iced Vanilla Latte", prepDurationSeconds: 60, desc: "아이스 바닐라 라떼" },
+  { menuName: "Soy Chai Latte", prepDurationSeconds: 90, desc: "두유 차이라떼" },
+  { menuName: "Matcha Latte (Oat milk)", prepDurationSeconds: 90, desc: "오트밀크 말차라떼" },
+  { menuName: "Hot Chocolate", prepDurationSeconds: 80, desc: "핫초콜릿" },
+  { menuName: "English Breakfast Tea", prepDurationSeconds: 100, desc: "잉글리시 브렉퍼스트 티" }
 ];
 
 const craftedOrderAlternatives: Record<string, CustomerPersona['preferredOrder'][]> = {
   cust_1: [
     {menuName:'Long Black',prepDurationSeconds:45,description:'롱블랙'},
     {menuName:'Iced Latte (Oat milk)',prepDurationSeconds:55,description:'오트밀크 아이스 라떼'},
+    {menuName:'Cold Brew',prepDurationSeconds:40,description:'콜드브루'},
+    {menuName:'Piccolo Latte',prepDurationSeconds:60,description:'피콜로 라떼'},
   ],
   cust_2: [
     {menuName:'Oat Flat White',prepDurationSeconds:85,description:'오트 플랫화이트'},
     {menuName:'Iced Chai Latte',prepDurationSeconds:55,description:'아이스 차이라떼'},
+    {menuName:'Cold Brew',prepDurationSeconds:40,description:'콜드브루'},
+    {menuName:'Iced Vanilla Latte',prepDurationSeconds:60,description:'아이스 바닐라 라떼'},
   ],
   cust_3: [
     {menuName:'Long Black',prepDurationSeconds:45,description:'롱블랙'},
     {menuName:'Flat White (Extra shot)',prepDurationSeconds:95,description:'샷 추가 플랫화이트'},
+    {menuName:'Piccolo Latte',prepDurationSeconds:60,description:'피콜로 라떼'},
+    {menuName:'Cappuccino',prepDurationSeconds:90,description:'카푸치노'},
   ],
   cust_4: [
     {menuName:'Soy Latte',prepDurationSeconds:85,description:'두유 라떼'},
     {menuName:'Chai Latte (Oat milk)',prepDurationSeconds:90,description:'오트밀크 차이라떼'},
+    {menuName:'Matcha Latte (Oat milk)',prepDurationSeconds:90,description:'오트밀크 말차라떼'},
+    {menuName:'English Breakfast Tea',prepDurationSeconds:100,description:'잉글리시 브렉퍼스트 티'},
   ],
   cust_5: [
     {menuName:'Long Black',prepDurationSeconds:45,description:'롱블랙'},
     {menuName:'Iced Long Black',prepDurationSeconds:45,description:'아이스 롱블랙'},
+    {menuName:'Cold Brew',prepDurationSeconds:40,description:'콜드브루'},
+    {menuName:'Double Espresso',prepDurationSeconds:50,description:'더블 에스프레소'},
   ],
   cust_6: [
     {menuName:'Flat White with Honey',prepDurationSeconds:90,description:'꿀 플랫화이트'},
     {menuName:'Iced Latte (Oat milk)',prepDurationSeconds:55,description:'오트밀크 아이스 라떼'},
+    {menuName:'Skinny Cappuccino',prepDurationSeconds:90,description:'무지방 카푸치노'},
+    {menuName:'Matcha Latte (Oat milk)',prepDurationSeconds:90,description:'오트밀크 말차라떼'},
   ],
   cust_7: [
     {menuName:'Long Black',prepDurationSeconds:45,description:'롱블랙'},
     {menuName:'Flat White (Extra shot)',prepDurationSeconds:95,description:'샷 추가 플랫화이트'},
+    {menuName:'Espresso Macchiato',prepDurationSeconds:55,description:'에스프레소 마키아토'},
+    {menuName:'Cappuccino',prepDurationSeconds:90,description:'카푸치노'},
   ],
   cust_8: [
     {menuName:'Iced Long Black',prepDurationSeconds:45,description:'아이스 롱블랙'},
     {menuName:'Batch Brew (Filter)',prepDurationSeconds:40,description:'배치브루 필터커피'},
+    {menuName:'Iced Vanilla Latte',prepDurationSeconds:60,description:'아이스 바닐라 라떼'},
+    {menuName:'Iced Matcha Latte (Oat milk)',prepDurationSeconds:60,description:'오트밀크 아이스 말차라떼'},
   ],
   cust_9: [
     {menuName:'Flat White',prepDurationSeconds:85,description:'플랫화이트'},
     {menuName:'Long Black',prepDurationSeconds:45,description:'롱블랙'},
+    {menuName:'Mocha with Marshmallow',prepDurationSeconds:100,description:'마시멜로 모카'},
+    {menuName:'Hot Chocolate',prepDurationSeconds:80,description:'핫초콜릿'},
   ],
   cust_10: [
     {menuName:'Oat Flat White (KeepCup)',prepDurationSeconds:85,description:'텀블러 오트 플랫화이트'},
     {menuName:'Almond Iced Latte (KeepCup)',prepDurationSeconds:55,description:'텀블러 아몬드 아이스 라떼'},
+    {menuName:'Almond Cappuccino (KeepCup)',prepDurationSeconds:90,description:'텀블러 아몬드 카푸치노'},
+    {menuName:'Chai Latte (Oat milk, KeepCup)',prepDurationSeconds:90,description:'텀블러 오트밀크 차이라떼'},
   ],
 };
 

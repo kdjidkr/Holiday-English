@@ -11,6 +11,7 @@ export const appStyles=StyleSheet.create({
   briefingItem:{flexDirection:'row',alignItems:'flex-start',gap:12,paddingVertical:14},
   briefingIcon:{width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center'},
   briefingLabel:{fontSize:12,lineHeight:17,fontWeight:'600',color:C.muted},
+  briefingEnglish:{fontSize:13,lineHeight:20,fontWeight:'400',color:C.muted,marginTop:3},
   briefingBody:{fontSize:16,lineHeight:24,fontWeight:'500',letterSpacing:-0.3,color:C.ink},
   briefingFooter:{padding:24,paddingTop:20},
   briefingStart:{minHeight:54,borderRadius:16,backgroundColor:C.ink,paddingHorizontal:20,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},
