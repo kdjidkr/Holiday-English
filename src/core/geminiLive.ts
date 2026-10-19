@@ -41,7 +41,9 @@ export class GeminiLiveClient {
       await this.audio!.resume();
       if (!this.active) return;
       const model = 'gemini-3.8-live';
-      const ws = new WebSocket(geminiLiveSocketUrl('gemini-3.8-live'));
+      const socketUrl = await geminiLiveSocketUrl('gemini-3.8-live');
+      if (!this.active) return;
+      const ws = new WebSocket(socketUrl);
       this.ws = ws;
       this.setupTimer = setTimeout(() => { if (this.active && !this.ready) callbacks.onError('손님과 연결되지 않았어요. 연습 모드로 이어갈 수 있습니다.'); }, 12000);
       ws.onopen = () => {

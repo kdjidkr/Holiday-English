@@ -10,9 +10,10 @@ const react = {
   useEffect(fn,deps) { const i=cursor++; const previous=slots[i]; if(!previous || deps.some((d,j)=>d!==previous.deps[j])) effects.push(()=>{previous?.cleanup?.();slots[i]={deps,cleanup:fn()};}); },
 };
 const mod={exports:{}};
+const fakeFetch=(_url,options)=>new Promise(resolve=>requests.push({sentence:JSON.parse(options.body).contents[0].parts[0].text,signal:options.signal,resolve}));
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/useTranslation.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText, {
-  module:mod,exports:mod.exports,require:name=>name==='react'?react:{apiUrl:value=>value},AbortController,setTimeout,clearTimeout,
-  fetch:(_url,options)=>new Promise(resolve=>requests.push({sentence:JSON.parse(options.body).contents[0].parts[0].text,signal:options.signal,resolve})),
+  module:mod,exports:mod.exports,require:name=>name==='react'?react:name==='./apiClient'?{apiFetch:fakeFetch}:{apiUrl:value=>value},AbortController,setTimeout,clearTimeout,
+  fetch:fakeFetch,
 });
 const {splitDialogueSentences,useTranslation}=mod.exports;
 const render=(text,enabled=true,busy=true)=>{cursor=0;const result=useTranslation(text,enabled,busy);while(effects.length)effects.shift()();return result;};

@@ -1,6 +1,7 @@
 import type { LiveCallbacks } from './geminiLive';
 import type { CustomerPersona } from '../scenarios/types';
 import {apiUrl} from './apiUrl';
+import {apiFetch} from './apiClient';
 
 // Explicit cast assignments. Voices are shared only after the available same-gender pool is exhausted.
 export const CUSTOMER_VOICES: Record<string, {name:string; gender:string}> = {
@@ -105,7 +106,7 @@ export class GeminiTtsClient {
     this.history.push({role:'user',parts:[{text}]});
     this.callbacks.onStart();
     void (async()=>{
-      const response=await fetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
+      const response=await apiFetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
         method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
         body:JSON.stringify({systemInstruction:{parts:[{text:this.instruction}]},contents:this.history.slice(-19),generationConfig:{temperature:0.7,maxOutputTokens:512,thinkingConfig:{thinkingLevel:'minimal'}}}),
       });
@@ -122,7 +123,7 @@ export class GeminiTtsClient {
       if(!this.sound){finish();return;}
       const audioTimeout=setTimeout(()=>controller.abort(),18000);
       try {
-        const speech=await fetch(apiUrl('/api/gemini/interactions'),{
+        const speech=await apiFetch(apiUrl('/api/gemini/interactions'),{
           method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
           body:JSON.stringify({model:'gemini-3.8-flash-lite-tts',input:[{type:'user_input',content:[{type:'text',text:line,annotations:[{type:'speech_metadata',style:this.style}]}]}],response_format:{type:'audio'},generation_config:{speech_config:[{voice:this.voice}]}}),
         });

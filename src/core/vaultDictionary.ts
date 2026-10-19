@@ -40,7 +40,7 @@ function comparison(note:LearnedPattern){
 export async function findDuplicate(incoming:LearnedPattern,candidates:LearnedPattern[],signal:AbortSignal):Promise<string|undefined>{
   if(!candidates.length)return;
   const decide=async(questions:Record<string,unknown>,state:unknown)=>{
-    const response=await fetch(apiUrl('/api/jev'),{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'jev-latest',state,questions})});
+    const response=await apiFetch(apiUrl('/api/jev'),{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'jev-latest',state,questions})});
     if(!response.ok)throw new Error('JEV unavailable');const data=await response.json();return data.answers || {};
   };
   const state={incoming:comparison(incoming),existing:candidates.map((note,index)=>({key:`entry_${index}`,...comparison(note)}))};
@@ -64,3 +64,4 @@ export function saveDictionaryEntry(notes:LearnedPattern[],incoming:LearnedPatte
   return notes.map(note=>note.id===target.id?merged:note);
 }
 import {apiUrl} from './apiUrl';
+import {apiFetch} from './apiClient';

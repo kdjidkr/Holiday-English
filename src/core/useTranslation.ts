@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiUrl } from './apiUrl';
+import { apiFetch } from './apiClient';
 export type SentenceTranslation = { translation: string };
 
 export function splitDialogueSentences(text: string, speaking: boolean): string[] {
@@ -19,7 +20,7 @@ export function splitDialogueSentences(text: string, speaking: boolean): string[
 }
 
 export async function translateDialogue(text: string, signal: AbortSignal): Promise<SentenceTranslation> {
-  const response = await fetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'), {
+  const response = await apiFetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'), {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

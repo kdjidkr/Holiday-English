@@ -2,7 +2,8 @@ const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require(
 const frames={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/sentenceFrames.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:frames,exports:frames.exports});
 const mod={exports:{}};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/shiftReview.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:frames.exports,fetch:()=>{throw Error('No network expected');}});
+const noNetwork=()=>{throw Error('No network expected');};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/shiftReview.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:name==='./apiClient'?{apiFetch:noNetwork}:frames.exports,fetch:noNetwork});
 const {validateShiftReview,reviewContext,reviewExpressionToPattern,generateShiftReview}=mod.exports;
 const record={id:'shift-test',day:4,sessions:[{customer:{name:'Jack'},dialogue:[{speaker:'customer',text:'How long have you worked here?'},{speaker:'user',text:'I work here since two weeks.'},{speaker:'customer',text:'Welcome to Brisbane!'},{speaker:'user',text:'Help',rescue:true}]}]};
 const card={sessionIndex:0,turnIndex:1,koreanSentence:'이곳에서 일한 지 2주 됐어요.',kind:'polish',note:'기간을 나타내는 for와 현재완료를 사용해요.',expressions:[{english:'I have been working here for two weeks.',koreanMeaning:'이곳에서 일한 지 2주 됐어요.',explanation:'for는 기간을 나타내요.'},{english:'I started working here two weeks ago.',koreanMeaning:'2주 전에 여기서 일하기 시작했어요.',explanation:'시작 시점을 말하는 다른 표현이에요.'}]};

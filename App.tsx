@@ -20,7 +20,11 @@ import { LearnedPattern } from './src/scenarios/types';
 import { ShiftRecord } from './src/core/gameRules';
 
 import { palette as C, ActionButton as Button } from './src/components/design';
-export default function App() {
+import { apiUrl } from './src/core/apiUrl';
+import { apiFetch, onSessionExpired, readSessionToken, saveSessionToken } from './src/core/apiClient';
+declare const __DEV__: boolean;
+
+function GameApp() {
   const store = useGameStore();
   const game = useCafeGame();
   const g = game.state;
@@ -162,5 +166,55 @@ export default function App() {
       </View>
     </Modal>
     <Modal visible={exitConfirm} transparent animationType="fade" onRequestClose={() => setExitConfirm(false)}><View style={s.modalShade}><View style={s.confirm}><Text style={s.heading}>오늘 근무를 멈출까요?</Text><Text style={s.subtitle}>이번 근무는 결산 전이라 저장되지 않습니다.{ '\n' }이전 근무와 단골 기록은 남아 있어요.</Text><View style={s.actionRow}><Button secondary onPress={() => setExitConfirm(false)}>계속 이야기하기</Button><Button onPress={() => {game.leave();setExitConfirm(false);}}>카페 나가기</Button></View></View></View></Modal>
+  </SafeAreaView>;
+}
+
+export default function App() {
+  const [status, setStatus] = useState<'checking' | 'signedOut' | 'signedIn'>(__DEV__ ? 'signedIn' : 'checking');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (__DEV__) return;
+    let active = true;
+    const unsubscribe = onSessionExpired(() => setStatus('signedOut'));
+    void (async () => {
+      const token = await readSessionToken();
+      if (!token) { if (active) setStatus('signedOut'); return; }
+      try {
+        const response = await apiFetch(apiUrl('/api/auth/session'));
+        if (active) setStatus(response.ok ? 'signedIn' : 'signedOut');
+      } catch { if (active) { setError('서버에 연결할 수 없어요. 네트워크를 확인해 주세요.'); setStatus('signedOut'); } }
+    })();
+    return () => { active = false; unsubscribe(); };
+  }, []);
+
+  const login = async () => {
+    if (!password.trim() || submitting) return;
+    setSubmitting(true); setError('');
+    try {
+      const response = await fetch(apiUrl('/api/auth/login'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+      const data = await response.json();
+      if (!response.ok || !data.token) throw new Error(response.status === 401 ? '비밀번호를 확인해 주세요.' : response.status === 503 ? '서버 인증 설정이 완료되지 않았어요.' : '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      await saveSessionToken(data.token);
+      setPassword(''); setStatus('signedIn');
+    } catch (loginError) {
+      setError(loginError instanceof Error && loginError.message ? loginError.message : '서버에 연결할 수 없어요. 네트워크를 확인해 주세요.');
+    } finally { setSubmitting(false); }
+  };
+
+  if (status === 'checking') return <SafeAreaView style={{ flex: 1, backgroundColor: C.paper, justifyContent: 'center', padding: 24 }}><StatusBar barStyle="dark-content" /><Text style={{ color: C.ink, fontSize: 20, fontWeight: '700' }}>로그인 상태를 확인하고 있어요…</Text></SafeAreaView>;
+  if (status === 'signedIn') return <GameApp />;
+  return <SafeAreaView style={{ flex: 1, backgroundColor: C.paper, justifyContent: 'center', padding: 24 }}>
+    <StatusBar barStyle="dark-content" />
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Text style={{ color: C.coral, fontSize: 13, fontWeight: '800', letterSpacing: 2 }}>SUNNY SIDE</Text>
+      <Text style={{ color: C.ink, fontSize: 32, fontWeight: '800', marginTop: 14 }}>카페 문을 열어요</Text>
+      <Text style={{ color: C.muted, fontSize: 16, lineHeight: 24, marginTop: 10, marginBottom: 28 }}>앱을 사용하려면 접속 비밀번호를 입력해 주세요.</Text>
+      <TextInput accessibilityLabel="앱 접속 비밀번호" value={password} onChangeText={setPassword} onSubmitEditing={login} secureTextEntry autoCapitalize="none" autoCorrect={false} placeholder="접속 비밀번호" placeholderTextColor={C.muted} returnKeyType="go" editable={!submitting} style={{ minHeight: 58, borderRadius: 18, borderWidth: 1, borderColor: C.line, backgroundColor: '#FFFFFF', paddingHorizontal: 18, color: C.ink, fontSize: 17, marginBottom: 12 }} />
+      {!!error && <Text accessibilityRole="alert" style={{ color: C.coral, fontSize: 14, lineHeight: 21, marginBottom: 14 }}>{error}</Text>}
+      <Button disabled={!password.trim() || submitting} onPress={login}>{submitting ? '확인하고 있어요…' : '앱 시작하기'}</Button>
+    </KeyboardAvoidingView>
   </SafeAreaView>;
 }

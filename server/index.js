@@ -1,11 +1,9 @@
-const fs = require('node:fs');
 const http = require('node:http');
-const path = require('node:path');
 const { URL } = require('node:url');
 const WebSocket = require('ws');
 const { createJevMiddleware } = require('../scripts/jevProxy.cjs');
 
-const projectRoot = path.resolve(__dirname, '..');
+const projectRoot = require('node:path').resolve(__dirname, '..');
 if (require.main === module) {
   try { require('@expo/env').load(projectRoot); } catch { /* Render provides environment variables directly. */ }
 }
@@ -13,17 +11,14 @@ if (require.main === module) {
 const PORT = Number(process.env.PORT || 3000);
 const HOST = '0.0.0.0';
 const LIVE_PATH = '/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
-const WEB_DIR = path.join(projectRoot, 'dist');
-const MIME_TYPES = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
-};
 const allowedTextModels = new Set((process.env.GEMINI_TEXT_MODELS || 'gemini-3.5-flash-lite').split(',').map(value => value.trim()).filter(Boolean));
 const allowedTtsModels = new Set((process.env.GEMINI_TTS_MODELS || 'gemini-3.8-flash-lite-tts').split(',').map(value => value.trim()).filter(Boolean));
 const allowedLiveModels = new Set((process.env.GEMINI_LIVE_MODELS || 'gemini-3.8-live').split(',').map(value => value.trim()).filter(Boolean));
 const requestCounts = new Map();
 const liveConnections = new Map();
+const loginAttempts = new Map();
+const websocketTickets = new Map();
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 
 function geminiKey() {
   return (process.env.GEMINI_API_KEY || '').trim();
@@ -51,7 +46,7 @@ function applyCors(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
   return true;
 }
@@ -61,6 +56,68 @@ function sendJson(res, status, value) {
   const body = JSON.stringify(value);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': Buffer.byteLength(body) });
   res.end(body);
+}
+
+function authConfigReady() {
+  return Boolean((process.env.APP_ACCESS_PASSWORD || '').trim() && (process.env.APP_SESSION_SECRET || '').trim());
+}
+
+function signSession(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = require('node:crypto').createHmac('sha256', process.env.APP_SESSION_SECRET).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+function verifySession(token) {
+  if (!authConfigReady() || typeof token !== 'string') return false;
+  const [encoded, supplied, extra] = token.split('.');
+  if (!encoded || !supplied || extra) return false;
+  const expected = require('node:crypto').createHmac('sha256', process.env.APP_SESSION_SECRET).update(encoded).digest();
+  let actual;
+  try { actual = Buffer.from(supplied, 'base64url'); } catch { return false; }
+  if (actual.length !== expected.length || !require('node:crypto').timingSafeEqual(actual, expected)) return false;
+  try { const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString()); return Number(payload.exp) > Math.floor(Date.now() / 1000); }
+  catch { return false; }
+}
+
+function bearerToken(req) {
+  const value = req.headers.authorization || '';
+  return value.startsWith('Bearer ') ? value.slice(7) : '';
+}
+
+function allowLoginAttempt(req, res) {
+  const now = Date.now();
+  const ip = req.socket.remoteAddress || 'unknown';
+  const current = loginAttempts.get(ip);
+  const state = current && now - current.start < 15 * 60_000 ? current : { start: now, count: 0 };
+  state.count++;
+  loginAttempts.set(ip, state);
+  if (loginAttempts.size > 2000) for (const [key, item] of loginAttempts) if (now - item.start > 15 * 60_000) loginAttempts.delete(key);
+  if (state.count <= 10) return true;
+  sendJson(res, 429, { error: 'RATE_LIMITED' });
+  return false;
+}
+
+async function handleLogin(req, res) {
+  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return sendJson(res, 405, { error: 'METHOD_NOT_ALLOWED' }); }
+  if (!allowLoginAttempt(req, res)) return;
+  if (!authConfigReady()) return sendJson(res, 503, { error: 'APP_AUTH_NOT_CONFIGURED' });
+  let payload;
+  try { payload = await readJson(req, 4096); }
+  catch (error) { return sendJson(res, error.status || 400, { error: error.message || 'INVALID_REQUEST' }); }
+  const expected = require('node:crypto').createHash('sha256').update(process.env.APP_ACCESS_PASSWORD.trim()).digest();
+  const supplied = require('node:crypto').createHash('sha256').update(String(payload.password || '')).digest();
+  if (!require('node:crypto').timingSafeEqual(expected, supplied)) return sendJson(res, 401, { error: 'INVALID_PASSWORD' });
+  const now = Math.floor(Date.now() / 1000);
+  return sendJson(res, 200, { token: signSession({ iat: now, exp: now + SESSION_TTL_SECONDS }), expiresAt: (now + SESSION_TTL_SECONDS) * 1000 });
+}
+
+async function handleWebsocketTicket(req, res) {
+  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return sendJson(res, 405, { error: 'METHOD_NOT_ALLOWED' }); }
+  if (!isDevelopment() && !verifySession(bearerToken(req))) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+  const ticket = require('node:crypto').randomBytes(32).toString('base64url');
+  websocketTickets.set(ticket, Date.now() + 60_000);
+  return sendJson(res, 200, { ticket });
 }
 
 function allowRequest(req, res) {
@@ -141,30 +198,6 @@ async function proxyGemini(req, res, pathName, model) {
   }
 }
 
-async function serveStatic(req, res, pathname) {
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.setHeader('Allow', 'GET, HEAD');
-    return sendJson(res, 405, { error: 'METHOD_NOT_ALLOWED' });
-  }
-  let decoded;
-  try { decoded = decodeURIComponent(pathname); }
-  catch { return sendJson(res, 400, { error: 'INVALID_PATH' }); }
-  const candidate = path.resolve(WEB_DIR, `.${decoded}`);
-  const file = candidate.startsWith(`${WEB_DIR}${path.sep}`) || candidate === path.join(WEB_DIR, 'index.html') ? candidate : path.join(WEB_DIR, 'index.html');
-  let target = file;
-  try { if (!fs.statSync(target).isFile()) target = path.join(WEB_DIR, 'index.html'); }
-  catch { target = path.join(WEB_DIR, 'index.html'); }
-  fs.readFile(target, (error, content) => {
-    if (error) return sendJson(res, 503, { error: 'WEB_BUILD_NOT_FOUND', hint: 'Run npm run build:web before starting the production server.' });
-    res.writeHead(200, {
-      'Content-Type': MIME_TYPES[path.extname(target).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': target.endsWith('index.html') ? 'no-cache' : 'public, max-age=31536000, immutable',
-      'Content-Length': content.length,
-    });
-    res.end(req.method === 'HEAD' ? undefined : content);
-  });
-}
-
 const jev = createJevMiddleware();
 const server = http.createServer((req, res) => {
   let pathname;
@@ -174,13 +207,18 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS' && pathname.startsWith('/api/')) { res.writeHead(204); return res.end(); }
   if (pathname.startsWith('/api/') && !allowRequest(req, res)) return;
 
+  if (pathname === '/api/auth/login') return void handleLogin(req, res);
+  if (pathname === '/healthz') return sendJson(res, 200, { status: 'ok' });
+  if (pathname.startsWith('/api/') && !isDevelopment() && !verifySession(bearerToken(req))) return sendJson(res, 401, { error: 'UNAUTHORIZED' });
+  if (pathname === '/api/auth/session') return sendJson(res, 200, { valid: true });
+  if (pathname === '/api/auth/ws-ticket') return void handleWebsocketTicket(req, res);
+
   jev(req, res, () => {
-    if (pathname === '/healthz') return sendJson(res, 200, { status: 'ok' });
     const generateMatch = pathname.match(/^\/api\/gemini\/models\/([A-Za-z0-9._-]+):generateContent$/);
     if (generateMatch) return void proxyGemini(req, res, pathname, generateMatch[1]);
     if (pathname === '/api/gemini/interactions') return void proxyGemini(req, res, pathname);
     if (pathname.startsWith('/api/')) return sendJson(res, 404, { error: 'NOT_FOUND' });
-    return void serveStatic(req, res, pathname);
+    return sendJson(res, 404, { error: 'API_ONLY_SERVER' });
   });
 });
 
@@ -189,6 +227,12 @@ server.on('upgrade', (req, socket, head) => {
   let url;
   try { url = new URL(req.url, 'http://localhost'); } catch { socket.destroy(); return; }
   if (url.pathname !== '/api/gemini/live' || !isAllowedOrigin(req.headers.origin, req.headers.host || '')) { socket.destroy(); return; }
+  if (isDevelopment() === false) {
+    const ticket = url.searchParams.get('ticket') || '';
+    const expiresAt = websocketTickets.get(ticket);
+    websocketTickets.delete(ticket);
+    if (!expiresAt || expiresAt < Date.now()) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); socket.destroy(); return; }
+  }
   const model = (url.searchParams.get('model') || 'gemini-3.8-live').replace(/^models\//, '');
   if (!allowedLiveModels.has(model) || !geminiKey()) { socket.destroy(); return; }
   const ip = req.socket.remoteAddress || 'unknown';

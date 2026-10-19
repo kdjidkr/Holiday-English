@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const fs = require('node:fs');
 const vm = require('node:vm');
-function load(path, resolve = name => name === './apiUrl' ? {apiUrl:value=>value,geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'} : require(name)) {
+function load(path, resolve = name => name === './apiUrl' ? {apiUrl:value=>value,geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'} : name === './apiClient' ? {apiFetch:()=>{throw Error('Unexpected API call');}} : require(name)) {
   const output = ts.transpileModule(fs.readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} }; vm.runInNewContext(output, { module, exports: module.exports, require: resolve, setTimeout, clearTimeout }); return module.exports;
 }

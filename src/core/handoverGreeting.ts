@@ -1,6 +1,7 @@
 import type { CustomerPersona } from '../scenarios/types';
 import type { DialogueTurn } from './gameRules';
 import {apiUrl} from './apiUrl';
+import {apiFetch} from './apiClient';
 export interface HandoverGreeting { english: string; korean: string }
 
 export function defaultHandoverGreeting(customer: CustomerPersona): HandoverGreeting {
@@ -34,7 +35,7 @@ export function handoverContext(customer: CustomerPersona, dialogue: DialogueTur
 }
 
 export async function generateHandoverGreeting(customer: CustomerPersona, dialogue: DialogueTurn[], signal: AbortSignal): Promise<HandoverGreeting> {
-  const response=await fetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
+  const response=await apiFetch(apiUrl('/api/gemini/models/gemini-3.5-flash-lite:generateContent'),{
     method:'POST',signal,headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       systemInstruction:{parts:[{text:`Write ONE very short natural Australian English line spoken by the HUMAN PLAYER / BARISTA (speaker=user) TO the AI CUSTOMER (speaker=customer) while handing the customer their actual order. These roles never switch. In the generated line, I/my refers to the barista; you/your refers to the customer. Dialogue turn speaker and addressee fields identify who said each line and to whom. Read the whole supplied dialogue, not only the last reply.

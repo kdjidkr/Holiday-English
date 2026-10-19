@@ -1,7 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 const source=ts.transpileModule(fs.readFileSync('src/core/expressionSuggestions.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 let requests=[],responses=[];const mod={exports:{}};
-vm.runInNewContext(source,{module:mod,exports:mod.exports,require:()=>({apiUrl:value=>value}),fetch:async(url,options)=>{assert.equal(url,'/api/jev');assert.equal(options.headers.Authorization,undefined);requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({answers:responses.shift()})};}});
+const fakeFetch=async(url,options)=>{assert.equal(url,'/api/jev');requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({answers:responses.shift()})};};
+vm.runInNewContext(source,{module:mod,exports:mod.exports,require:()=>({apiUrl:value=>value,apiFetch:fakeFetch}),fetch:fakeFetch});
 const api=mod.exports;
 const notes=[{id:'a',shiftDay:3,englishTemplate:'keen on',koreanMeaning:'~을 좋아하다',expressionKind:'phrase'},{id:'b',englishTemplate:'head down to',koreanMeaning:'~로 가다',expressionKind:'phrase'},{id:'c',englishTemplate:'keen on',koreanMeaning:'~을 좋아하다',expressionKind:'phrase'},{id:'sentence',englishTemplate:'I like coffee.',koreanMeaning:'커피를 좋아해요.'}];
 const context={customerLine:'Got any plans after work?',recentDialogue:[],order:'Flat white',drinkReady:false,briefing:['A sunny morning']};

@@ -10,15 +10,26 @@
       "backgroundColor": "#2D4C40"
     },
     "ios": {
+      "bundleIdentifier": "com.sunnyside.aussiewhsimulator",
       "supportsTablet": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "손님과의 실시간 영어 스몰토크 대화를 위해 마이크 권한이 필요합니다."
+        "NSMicrophoneUsageDescription": "손님과의 실시간 영어 스몰토크 대화를 위해 마이크 권한이 필요합니다.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.sunnyside.aussiewhsimulator",
       "permissions": [
         "RECORD_AUDIO"
       ]
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c5006aaf-e9b9-4e64-9be0-e8db823d2e96"
+      }
     }
   }
 }

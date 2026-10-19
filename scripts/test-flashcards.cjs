@@ -21,11 +21,11 @@ session=f.rateCard(session,true);assert.equal(session.done,true);assert.equal(se
 assert.equal(f.rateCard(session,false),session);assert.equal(f.startCards([]).done,true);
 console.log('PASS: Day/type multi-filter, no duplicate cards, shuffle preserves notes, retry after round and unique session totals');
 const dictMod={exports:{}};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/vaultDictionary.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:dictMod,exports:dictMod.exports,require:()=>f});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/vaultDictionary.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:dictMod,exports:dictMod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:name==='./apiClient'?{apiFetch:async()=>{throw Error('Unexpected API call');}}:f});
 const testMod={exports:{}};
 const frameModule={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/sentenceFrames.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:frameModule,exports:frameModule.exports});
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/vocabularyTest.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:testMod,exports:testMod.exports,require:name=>name==='./flashcards'?f:frameModule.exports});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/core/vocabularyTest.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:testMod,exports:testMod.exports,require:name=>name==='./flashcards'?f:name==='./apiClient'?{apiFetch:async()=>{throw Error('Unexpected API call');}}:frameModule.exports});
 (async()=>{
 const storeMod={exports:{}};let persistConfig;
 const create=()=>initializer=>{let state;const set=next=>{state={...state,...(typeof next==='function'?next(state):next)};};state=initializer(set);const use=()=>state;use.getState=()=>state;return use;};
