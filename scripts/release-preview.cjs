@@ -39,17 +39,29 @@ try {
   const envFiles = staged.filter(file => file.split('/').some(part => part.startsWith('.env')));
   if (envFiles.length) throw new Error(`환경 파일은 커밋할 수 없습니다: ${envFiles.join(', ')}`);
 
-  run('git', ['commit', '-m', message]);
-  run('git', ['push', 'origin', 'HEAD:main']);
-
   const nativeChange = staged.some(file =>
     file === 'app.json' || file === 'package.json' || file === 'package-lock.json' ||
     file.startsWith('ios/') || file.startsWith('android/') || file.startsWith('plugins/')
   );
 
   if (nativeChange) {
+    const previous = JSON.parse(capture('git', ['show', 'HEAD:app.json'])).expo;
+    const current = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo;
+    const previousBuild = Number(previous.ios?.buildNumber || 0);
+    const currentBuild = Number(current.ios?.buildNumber || 0);
+    if (current.version === previous.version || currentBuild <= previousBuild) {
+      throw new Error('네이티브 변경이 있어요. app.json의 version과 ios.buildNumber를 올린 뒤 다시 실행하세요.');
+    }
+  }
+
+  run('git', ['commit', '-m', message]);
+  run('git', ['push', 'origin', 'HEAD:main']);
+
+  if (nativeChange) {
     console.log('네이티브 설정 변경이 있어 iOS 앱 빌드를 시작합니다.');
-    eas(['build', '--platform', 'ios', '--profile', 'preview', '--non-interactive', '--freeze-credentials', '--wait']);
+    eas(['build', '--platform', 'ios', '--profile', 'preview', '--non-interactive', '--freeze-credentials', '--wait'], {
+      env: { ...process.env, NODE_ENV: 'production', EXPO_NO_DOTENV: '1' },
+    });
   } else {
     const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo;
     const builds = JSON.parse(capture('npx', [
