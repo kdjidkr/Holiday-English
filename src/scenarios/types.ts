@@ -12,8 +12,7 @@ export interface CustomerPersona {
   age: number;
   gender: "MALE" | "FEMALE";
   occupation: string;
-  avatarSeed: string; // 아바타 그래픽 키
-  portraitIndex?: number; // 고유 초상화가 있는 첫 손님 묶음의 이미지 번호
+  portraitIndex?: number; // 초상화가 있는 고정 손님 이미지 번호 (기존 저장 기록은 없을 수 있음)
   preferredOrder: {
     menuName: string;
     prepDurationSeconds: number; // 커피 제조 시간 (40초 ~ 150초)

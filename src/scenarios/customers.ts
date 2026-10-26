@@ -7,7 +7,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 28,
     gender: "MALE",
     occupation: "IT 개발자 & 서퍼",
-    avatarSeed: "jack_surfer",
     portraitIndex: 0,
     preferredOrder: { menuName: "Large Flat White (Oat milk)", prepDurationSeconds: 90, description: "오트 플랫화이트" },
     personality: "햇살처럼 밝고 쾌활한 성격",
@@ -21,7 +20,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 26,
     gender: "FEMALE",
     occupation: "그래픽 디자이너 & 견주",
-    avatarSeed: "chloe_designer",
     portraitIndex: 1,
     preferredOrder: { menuName: "Iced Long Black (Less ice)", prepDurationSeconds: 45, description: "아이스 롱블랙" },
     personality: "트렌디하고 다정하며 리액션이 풍부함",
@@ -35,7 +33,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 31,
     gender: "MALE",
     occupation: "건설 현장 트레이디 (Tradie)",
-    avatarSeed: "liam_tradie",
     portraitIndex: 2,
     preferredOrder: { menuName: "Double Espresso + Banana Bread", prepDurationSeconds: 120, description: "더블 에스프레소 & 토스트 바나나브레드" },
     personality: "우렁차고 시원시원하며 털털함",
@@ -49,7 +46,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 24,
     gender: "FEMALE",
     occupation: "UQ 대학생 (간호학)",
-    avatarSeed: "emma_student",
     portraitIndex: 3,
     preferredOrder: { menuName: "Soy Chai Latte (Extra hot)", prepDurationSeconds: 90, description: "두유 차이라떼" },
     personality: "차분하지만 웃는 모습이 따뜻한 편",
@@ -63,7 +59,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 35,
     gender: "MALE",
     occupation: "포토그래퍼 & 바이크 라이더",
-    avatarSeed: "oliver_photog",
     portraitIndex: 4,
     preferredOrder: { menuName: "Batch Brew (Filter)", prepDurationSeconds: 40, description: "배치브루 필터커피" },
     personality: "감각적이고 호기심이 많아 질문을 잘 건넴",
@@ -77,7 +72,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 29,
     gender: "FEMALE",
     occupation: "필라테스 강사",
-    avatarSeed: "sophie_pilates",
     portraitIndex: 5,
     preferredOrder: { menuName: "Skinny Latte with Honey", prepDurationSeconds: 90, description: "무지방 꿀라떼" },
     personality: "긍정적인 에너지가 넘치고 칭찬을 아끼지 않음",
@@ -91,7 +85,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 27,
     gender: "MALE",
     occupation: "회계 법인 주니어",
-    avatarSeed: "noah_accountant",
     portraitIndex: 6,
     preferredOrder: { menuName: "Piccolo Latte", prepDurationSeconds: 60, description: "피콜로 라떼" },
     personality: "스마트하고 정중하며 경청을 잘함",
@@ -105,7 +98,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 23,
     gender: "FEMALE",
     occupation: "로컬 인디 뮤지션",
-    avatarSeed: "mia_musician",
     portraitIndex: 7,
     preferredOrder: { menuName: "Cold Brew with Oat milk", prepDurationSeconds: 40, description: "오트 콜드브루" },
     personality: "자유분방하고 재치 있는 농담을 잘 던짐",
@@ -119,7 +111,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 48,
     gender: "MALE",
     occupation: "동네 서점 주인 (브리즈번 로컬 토박이)",
-    avatarSeed: "dave_bookstore",
     portraitIndex: 8,
     preferredOrder: { menuName: "Traditional Cappuccino (Lots of choc powder)", prepDurationSeconds: 90, description: "초코파우더 듬뿍 카푸치노" },
     personality: "푸근하고 아빠처럼 친근한 호주 아저씨",
@@ -133,7 +124,6 @@ export const BRISBANE_CUSTOMERS: CustomerPersona[] = [
     age: 32,
     gender: "FEMALE",
     occupation: "환경 NGO 코디네이터",
-    avatarSeed: "zara_ngo",
     portraitIndex: 9,
     preferredOrder: { menuName: "Almond Flat White (KeepCup)", prepDurationSeconds: 90, description: "텀블러 아몬드 플랫화이트" },
     personality: "지적이고 환경 보호에 진심인 친화적 손님",
@@ -150,7 +140,6 @@ BRISBANE_CUSTOMERS.push(
     age: 29,
     gender: "MALE",
     occupation: "퍼스널 트레이너",
-    avatarSeed: "fit_male_ethan",
     portraitIndex: 10,
     preferredOrder: { menuName: "Iced Long Black (Extra shot)", prepDurationSeconds: 50, description: "샷 추가 아이스 롱블랙" },
     personality: "활기차고 건강한 생활을 즐기지만, 운동 이야기를 강요하지 않는 편안한 성격",
@@ -164,7 +153,6 @@ BRISBANE_CUSTOMERS.push(
     age: 28,
     gender: "FEMALE",
     occupation: "수영 강사 & 스트렝스 코치",
-    avatarSeed: "fit_female_riley",
     portraitIndex: 11,
     preferredOrder: { menuName: "Iced Latte (Almond milk)", prepDurationSeconds: 55, description: "아몬드밀크 아이스 라떼" },
     personality: "자신감 있고 다정하며, 바쁜 아침에도 주변을 잘 살피는 성격",
@@ -178,7 +166,6 @@ BRISBANE_CUSTOMERS.push(
     age: 24,
     gender: "MALE",
     occupation: "선샤인 코스트 서핑 강사",
-    avatarSeed: "surfer_kai",
     portraitIndex: 12,
     preferredOrder: { menuName: "Flat White (Extra shot)", prepDurationSeconds: 95, description: "샷 추가 플랫화이트" },
     personality: "느긋하고 친근하며 바다와 파도 이야기를 좋아하는 서퍼 청년",
@@ -192,7 +179,6 @@ BRISBANE_CUSTOMERS.push(
     age: 34,
     gender: "MALE",
     occupation: "브리즈번 금융회사 애널리스트",
-    avatarSeed: "finance_daniel",
     portraitIndex: 13,
     preferredOrder: { menuName: "Long Black (Takeaway)", prepDurationSeconds: 45, description: "테이크어웨이 롱블랙" },
     personality: "정갈하고 예의 바르며 차분하지만, 익숙해지면 건조한 농담도 하는 성격",
@@ -202,10 +188,6 @@ BRISBANE_CUSTOMERS.push(
   }
 );
 
-// 설정 손님 외 로컬 손님 40명 자동 생성
-const namesM = ["Lucas", "Ethan", "Henry", "Mason", "Leo", "Charlie", "Max", "Archie", "Harry", "Thomas", "Oscar", "Sam", "Cooper", "George", "Flynn", "Lachlan", "Angus", "Darcy", "Mitch", "Brodie"];
-const namesF = ["Isabella", "Grace", "Ava", "Ruby", "Harper", "Evie", "Willow", "Ella", "Freya", "Matilda", "Phoebe", "Sienna", "Penelope", "Hannah", "Layla", "Imogen", "Georgia", "Tess", "Summer", "Poppy"];
-const jobs = ["부동산 에이전트", "피트니스 코치", "셰프", "스타트업 마케터", "수의사", "플로리스트", "조경사", "물리치료사", "초등교사", "조종사"];
 const coffees = [
   { menuName: "Regular Flat White", prepDurationSeconds: 80, desc: "플랫화이트" },
   { menuName: "Large Latte with Caramel", prepDurationSeconds: 90, desc: "카라멜 라떼" },
@@ -286,32 +268,6 @@ const craftedOrderAlternatives: Record<string, CustomerPersona['preferredOrder']
     {menuName:'Chai Latte (Oat milk, KeepCup)',prepDurationSeconds:90,description:'텀블러 오트밀크 차이라떼'},
   ],
 };
-
-for (let i = 11; i <= 50; i++) {
-  const isMale = i % 2 === 1;
-  const name = isMale ? namesM[(i * 3) % namesM.length] : namesF[(i * 3) % namesF.length];
-  const job = jobs[i % jobs.length];
-  const coffee = coffees[i % coffees.length];
-  const age = 22 + (i % 25);
-
-  BRISBANE_CUSTOMERS.push({
-    id: `cust_${i}`,
-    name: name,
-    age: age,
-    gender: isMale ? "MALE" : "FEMALE",
-    occupation: job,
-    avatarSeed: `cust_avatar_${i}`,
-    preferredOrder: {
-      menuName: coffee.menuName,
-      prepDurationSeconds: coffee.prepDurationSeconds,
-      description: coffee.desc
-    },
-    personality: isMale ? "유쾌하고 털털한 호주 로컬" : "친절하고 호응이 좋은 호주 로컬",
-    aussieSlangTendency: ["No worries", "G'day", "Cheers", "Sweet as", "Too easy"],
-    reviewComment: `${name} 손님: "바리스타가 너무 친절해서 단골 찜했어요! 커피도 최고."`,
-    topics: ["오늘 날씨", "주말 계획", "호주 브리즈번 라이프"]
-  });
-}
 
 export function orderForVisit(customer: CustomerPersona, previousVisits: number, random: () => number = Math.random): CustomerPersona {
   if (previousVisits <= 0 || random() >= 0.3) return customer;

@@ -1,7 +1,11 @@
+import { bytesToBase64, pcmToWav } from './geminiLive';
 import type { LiveCallbacks } from './geminiLive';
 import type { CustomerPersona } from '../scenarios/types';
 import {apiUrl} from './apiUrl';
 import {apiFetch} from './apiClient';
+import { Platform } from 'react-native';
+import { Audio, AVPlaybackStatus } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
 // Explicit cast assignments. Voices are shared only after the available same-gender pool is exhausted.
 export const CUSTOMER_VOICES: Record<string, {name:string; gender:string}> = {
@@ -81,6 +85,9 @@ export class GeminiTtsClient {
   private revision=0;
   private complete: (()=>void)|null=null;
   private pendingBuffer: AudioBuffer|null=null;
+  private nativeSound: Audio.Sound|null=null;
+  private nativeSoundUri: string|null=null;
+  private nativePlaybackRevision=0;
   configureVoice(style:string) {this.style=style;}
   async connect(instruction:string, callbacks:LiveCallbacks, voice='Puck') {
     this.active=true;this.instruction=instruction;this.callbacks=callbacks;this.voice=voice;
@@ -89,9 +96,22 @@ export class GeminiTtsClient {
   }
   setSoundEnabled(enabled:boolean) {
     this.sound=enabled;
-    if(!enabled){if(this.complete)this.controller?.abort();this.source?.stop();this.source=null;this.pendingBuffer=null;this.complete?.();}
+    if(!enabled){if(this.complete)this.controller?.abort();this.source?.stop();this.source=null;this.pendingBuffer=null;
+      if(Platform.OS!=='web'){
+        const sound=this.nativeSound,uri=this.nativeSoundUri;this.nativeSound=null;this.nativeSoundUri=null;this.nativePlaybackRevision++;
+        if(sound)void sound.stopAsync().catch(()=>{}).then(()=>sound.unloadAsync().catch(()=>{})).finally(()=>{if(uri)void FileSystem.deleteAsync(uri,{idempotent:true}).catch(()=>{});this.complete?.();});
+        else this.complete?.();
+      } else this.complete?.();
+    }
   }
   async enableAudio() {
+    if(Platform.OS!=='web'){
+      try{
+        await Audio.setAudioModeAsync({playsInSilentModeIOS:true,shouldDuckAndroid:true,playThroughEarpieceAndroid:false});
+        if(this.nativeSound)await this.nativeSound.playAsync();
+        return true;
+      }catch{return false;}
+    }
     if(typeof window==='undefined') return false;
     try {const Audio=window.AudioContext || (window as any).webkitAudioContext;if(!Audio)return false;this.audio ||= new Audio();await this.audio!.resume();
       if(this.pendingBuffer && this.complete){const buffer=this.pendingBuffer;this.pendingBuffer=null;this.play(buffer,this.complete);}
@@ -133,6 +153,10 @@ export class GeminiTtsClient {
         const block=blocks[blocks.length-1] || payload.output_audio;
         if(!block?.data)throw new Error('No audio');
         if(!valid() || !this.sound){finish();return;}
+        if(Platform.OS!=='web'){
+          await this.playNativeAudio(block,finish,valid);
+          return;
+        }
         if(!this.audio)await this.enableAudio();
         if(!this.audio)throw new Error('Audio unavailable');
         const binary=atob(block.data), bytes=Uint8Array.from(binary,ch=>ch.charCodeAt(0));
@@ -148,5 +172,30 @@ export class GeminiTtsClient {
     if(!this.active || !this.audio)return;
     const source=this.audio.createBufferSource();source.buffer=buffer;source.connect(this.audio.destination);source.onended=finish;this.source=source;source.start();
   }
-  disconnect() {this.active=false;this.revision++;this.controller?.abort();this.source?.stop();this.source=null;this.complete=null;this.pendingBuffer=null;void this.audio?.close();this.audio=null;}
+  private async playNativeAudio(block:any,finish:()=>void,valid:()=>boolean) {
+    const directory=FileSystem.cacheDirectory;if(!directory)throw new Error('Native audio cache unavailable');
+    const binary=atob(block.data),bytes=Uint8Array.from(binary,(char:string)=>char.charCodeAt(0));
+    const mime=String(block.mime_type||'audio/wav').toLowerCase();
+    const isPcm=mime.startsWith('audio/l16');
+    const audioBytes=isPcm?pcmToWav(bytes,Number(block.sample_rate)||24000):bytes;
+    const extension=isPcm||mime.includes('wav')?'wav':mime.includes('mpeg')||mime.includes('mp3')?'mp3':mime.includes('aac')?'aac':mime.includes('m4a')?'m4a':mime.includes('aiff')?'aiff':mime.includes('ogg')||mime.includes('opus')?'ogg':'wav';
+    const revision=++this.nativePlaybackRevision,uri=`${directory}tts-${revision}.${extension}`;
+    await FileSystem.writeAsStringAsync(uri,bytesToBase64(audioBytes),{encoding:FileSystem.EncodingType.Base64});
+    if(!valid()||!this.sound){void FileSystem.deleteAsync(uri,{idempotent:true}).catch(()=>{});finish();return;}
+    await Audio.setAudioModeAsync({playsInSilentModeIOS:true,shouldDuckAndroid:true,playThroughEarpieceAndroid:false});
+    const {sound}=await Audio.Sound.createAsync({uri},{shouldPlay:false});
+    if(!valid()||!this.sound){void sound.unloadAsync().catch(()=>{});void FileSystem.deleteAsync(uri,{idempotent:true}).catch(()=>{});finish();return;}
+    this.nativeSound=sound;this.nativeSoundUri=uri;
+    sound.setOnPlaybackStatusUpdate((status:AVPlaybackStatus)=>{
+      if(!status.isLoaded||!status.didJustFinish||revision!==this.nativePlaybackRevision)return;
+      this.nativeSound=null;this.nativeSoundUri=null;void sound.unloadAsync().catch(()=>{});void FileSystem.deleteAsync(uri,{idempotent:true}).catch(()=>{});finish();
+    });
+    try{await sound.playAsync();}catch{this.callbacks?.onAudioBlocked?.();}
+  }
+  disconnect() {
+    this.active=false;this.revision++;this.controller?.abort();this.source?.stop();this.source=null;this.complete=null;this.pendingBuffer=null;
+    const sound=this.nativeSound,uri=this.nativeSoundUri;this.nativeSound=null;this.nativeSoundUri=null;this.nativePlaybackRevision++;
+    if(sound)void sound.stopAsync().catch(()=>{}).then(()=>sound.unloadAsync().catch(()=>{})).finally(()=>{if(uri)void FileSystem.deleteAsync(uri,{idempotent:true}).catch(()=>{});});
+    void this.audio?.close();this.audio=null;
+  }
 }

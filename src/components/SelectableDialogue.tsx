@@ -1,3 +1,4 @@
+import {Disclosure} from './Disclosure';
 import {SaveNoteButton} from './SaveNoteButton';
 import { FrameProposalCard } from './FrameProposalCard';
 import { MobileDialogueSelection } from './MobileDialogueSelection';
@@ -55,21 +56,21 @@ export function SelectableDialogue({text,day,speaker,textStyle,onSelectionChange
   const beginSelection=()=>{pending.current?.abort();revision.current++;lastKey.current='';setLoading(false);setTips([]);setError('');selectionCallback.current?.(true);};
   return <View>
     <View style={{flexDirection:'row',alignItems:'flex-start',gap:8}}><View style={{flex:1,minWidth:0}}><MobileDialogueSelection text={text || '…'} selection={selection} onSelect={value=>{void inspectRef.current(value);}} onBegin={beginSelection} textStyle={textStyle} /></View>{headerAction}</View>
-    {selection && <View style={{marginTop:12,gap:10}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text numberOfLines={2} style={{flex:1,fontSize:11,color:C.muted}}>선택한 말 · {selection.selected}</Text><Pressable accessibilityRole="button" accessibilityLabel="표현 Tip 닫기" onPress={closeSelection} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:20,color:C.muted}}>×</Text></Pressable></View>
-      {loading && <Text style={{fontSize:12,color:C.muted}}>문맥에서 표현을 살펴보고 있어요…</Text>}
+    {selection && <View key={selection.selected} style={{marginTop:12,gap:10}}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}} /><Pressable accessibilityRole="button" accessibilityLabel="선택 닫기" onPress={closeSelection} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:20,color:C.muted}}>×</Text></Pressable></View>
+      {loading && <Text style={{fontSize:12,color:C.muted}}>표현을 찾고 있어요…</Text>}
       {!!error && <Pressable accessibilityRole="button" onPress={()=>{lastKey.current='';void inspect(selection);}}><Text style={{fontSize:12,color:'#A35137'}}>{error} ↻</Text></Pressable>}
       {!loading && !error && !tips.length && <Text style={{fontSize:12,color:C.muted}}>설명할 단어나 표현을 조금 더 선택해 주세요.</Text>}
       {tips.map(tip=>{
         const pattern=expressionToPattern(tip,selection,day,speaker);
-        return <View key={pattern.id} style={{borderLeftWidth:3,borderLeftColor:C.gold,paddingLeft:12,paddingVertical:4}}>
-          <View style={{flexDirection:'row',alignItems:'center',gap:8}}><View style={{flex:1}}><Text style={{fontSize:10,fontWeight:'800',color:C.coral}}>Tip · {tip.kind==='phrase'?'표현':'단어'}</Text><Text selectable style={{fontSize:17,fontWeight:'700',color:C.ink}}>{tip.expression}</Text></View><SaveNoteButton pattern={pattern}/></View>
+        return <View key={pattern.id} style={{borderBottomWidth:1,borderBottomColor:C.line,paddingVertical:10}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:8}}><View style={{flex:1}}><Text selectable style={{fontSize:17,fontWeight:'700',color:C.ink}}>{tip.expression}</Text></View><SaveNoteButton pattern={pattern}/></View>
           <Text style={{fontSize:13,fontWeight:'600',color:C.ink,marginTop:4}}>{tip.meaning}</Text>
-          {tip.surface!==selection.selected.trim() && <Text style={{fontSize:11,color:C.coral,marginTop:4}}>원문 속 표현 · {tip.surface}</Text>}
-          <Text style={{fontSize:12,lineHeight:20,color:C.muted,marginTop:4}}>{tip.explanation}</Text>
+          <Disclosure label="설명">{tip.surface!==selection.selected.trim() && <Text style={{fontSize:11,color:C.coral,marginTop:4}}>원문 속 표현 · {tip.surface}</Text>}
+          <Text style={{fontSize:12,lineHeight:20,color:C.muted,marginTop:4}}>{tip.explanation}</Text></Disclosure>
         </View>;
       })}
-      {tips.filter((tip,index,array)=>tip.frame && array.findIndex(other=>other.frame?.template===tip.frame?.template)===index).slice(0,2).map(tip=><FrameProposalCard key={tip.frame!.template} frame={tip.frame!} day={day} source={selection.source} sourceKorean={tip.sourceKorean} speaker={speaker} />)}
+      {tips.some(tip=>tip.frame) && <Disclosure label="문장 틀">{tips.filter((tip,index,array)=>tip.frame && array.findIndex(other=>other.frame?.template===tip.frame?.template)===index).slice(0,2).map(tip=><FrameProposalCard key={tip.frame!.template} frame={tip.frame!} day={day} source={selection.source} sourceKorean={tip.sourceKorean} speaker={speaker} />)}</Disclosure>}
     </View>}
   </View>;
 }

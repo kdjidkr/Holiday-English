@@ -1,3 +1,4 @@
+import { Disclosure } from './src/components/Disclosure';
 import { BottomTabs } from './src/components/BottomTabs';
 import { generateShiftBriefing } from './src/core/shiftBriefing';
 import type { DailyEvent } from './src/scenarios/types';
@@ -83,12 +84,12 @@ function GameApp() {
       </View>
       {!store.hydrated ? <View style={s.loading}><Text style={s.subtitle}>카페 문을 여는 중…</Text></View> : <>
       {g.running && customer ? <>
-        <View style={[s.stage,{height:keyboardOpen ? 104 : Math.max(150,Math.min(height*.29,250))}]}>
+        <View style={[s.stage,{height:keyboardOpen ? 104 : Math.max(150,Math.min(height*.23,200))}]}>
           <CafeScene customer={customer} phase={g.phase} talking={g.talking} ready={ready} weather={g.event?.weather} gender={store.userProfile.gender} />
-          <View style={s.dayPill}><Text style={s.dayText}>DAY {store.currentShiftDay} · {g.index+1} / {g.customers.length}</Text></View>
+          <View style={s.dayPill}><Text style={s.dayText}>DAY {store.currentShiftDay}</Text></View>
           {relation?.status === 'REGULAR' && <View style={s.friendPill}><Text style={s.dayText}>♥ 단골</Text></View>}
         </View>
-        <View style={s.orderBar}><Text style={s.orderIcon}>☕</Text><Text numberOfLines={1} style={s.orderLabel}>{customer.preferredOrder.menuName}</Text><Text style={s.orderStatus}>{['FAREWELL','DEPARTING'].includes(g.phase) ? '전달 완료' : ready ? '준비 완료' : ['ARRIVING','ORDERING','AWAITING_ORDER'].includes(g.phase)?'주문 확인':`${Math.max(0,g.prepSeconds-g.seconds)}초`}</Text></View>
+        <View style={s.orderBar}><Text style={s.orderIcon}>☕</Text><Text numberOfLines={1} style={s.orderLabel}>{customer.preferredOrder.menuName}</Text>{g.finalSeconds!==null && <Text accessibilityLabel={`마지막 대화 ${g.finalSeconds}초`} style={s.orderStatus}>{g.finalSeconds}초</Text>}<Text style={s.orderStatus}>{['FAREWELL','DEPARTING'].includes(g.phase) ? '전달 완료' : ready ? '준비 완료' : ['ARRIVING','ORDERING','AWAITING_ORDER'].includes(g.phase)?'주문 확인':`${Math.max(0,g.prepSeconds-g.seconds)}초`}</Text></View>
         <View style={s.conversationHeader}>
           <View style={{flex:1}}><Text style={s.speaker}>{customer.name}</Text><Text style={s.speakerMeta}>{g.status !== 'ready' ? '연결하고 있어요' : g.talking || g.busy ? '이야기하는 중' : g.recording ? '듣고 있어요' : g.phase==='AWAITING_ORDER'?'주문을 확인해 주세요':'당신의 차례예요'}</Text></View>
           <View style={s.languageOptions}>{[{label:'EN',name:'영어',enabled:englishVisible,toggle:()=>setEnglishVisible(!englishVisible)},{label:'한',name:'한국어',enabled:store.translationEnabled,toggle:()=>store.setTranslationEnabled(!store.translationEnabled)}].map(option=><Pressable key={option.name} accessibilityRole="switch" accessibilityLabel={`${option.name} 대사 보기`} accessibilityState={{checked:option.enabled}} onPress={option.toggle} style={[s.languageOption,option.enabled && s.languageActive]}><Text style={[s.languageText,!option.enabled && {color:C.muted}]}>{option.label}{option.enabled?' ✓':''}</Text></Pressable>)}</View>
@@ -102,15 +103,8 @@ function GameApp() {
         </ScrollView>
         <View style={s.replyDock}>
           {g.phase==='AWAITING_ORDER' && <Button onPress={game.acceptOrder}>주문 받기</Button>}
-          {ready && g.phase==='CHATTING' && <View style={{flexDirection:'row',alignItems:'center',gap:12,paddingBottom:10}}>
-            <Text style={{flex:1,fontSize:14,fontWeight:'600',color:C.ink}}>커피가 준비됐어요</Text>
-            {g.finalSeconds!==null && <View accessible accessibilityLabel={`마지막으로 말할 시간 ${g.finalSeconds}초`} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}>
-              <Svg width={44} height={44} style={{position:'absolute'}}><Circle cx={22} cy={22} r={18} stroke={C.muted} strokeOpacity={0.18} strokeWidth={3} fill="none"/><Circle cx={22} cy={22} r={18} stroke={C.coral} strokeWidth={3} fill="none" strokeDasharray={`${2*Math.PI*18}`} strokeDashoffset={2*Math.PI*18*(1-g.finalSeconds/20)} rotation={-90} origin="22,22" strokeLinecap="round"/></Svg>
-              <Text style={{fontSize:14,fontWeight:'600',color:C.ink}}>{g.finalSeconds}</Text>
-            </View>}
-          </View>}
           {g.phase==='FAREWELL' && g.stalled && <Button secondary onPress={game.depart}>배웅하기</Button>}
-          {!!suggestions.length && <View style={{gap:5,paddingBottom:10}}>{suggestions.map(item=><View key={item.id} style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{item.day!=null && <Text style={{fontSize:10,color:C.muted,backgroundColor:C.mint,borderRadius:5,paddingHorizontal:5,paddingVertical:2}}>[{item.day}일차]</Text>}<Text selectable style={{fontSize:13,fontWeight:'600',color:C.ink}}>{item.english}</Text><Text style={{fontSize:12,color:C.muted}}>· {item.meaning}</Text></View>)}</View>}
+          {!!suggestions.length && <Disclosure key={customer.id} label="추천 표현">{suggestions.map(item=><View key={item.id} style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{item.day!=null && <Text style={{fontSize:10,color:C.muted,backgroundColor:C.mint,borderRadius:5,paddingHorizontal:5,paddingVertical:2}}>[{item.day}일차]</Text>}<Text selectable style={{fontSize:13,fontWeight:'600',color:C.ink}}>{item.english}</Text><Text style={{fontSize:12,color:C.muted}}>· {item.meaning}</Text></View>)}</Disclosure>}
           {g.phase==='CHATTING' && <View style={s.inputRow}>
             <TextInput accessibilityLabel="손님에게 할 말" editable={canTalk} style={s.field} value={input} onChangeText={setInput} onFocus={()=>setKeyboardOpen(true)} onBlur={()=>setKeyboardOpen(false)} placeholder={g.busy ? '손님의 이야기를 듣는 중…' : '내 대답…'} placeholderTextColor={C.muted} onSubmitEditing={sendInput} />
             <Pressable accessibilityRole="button" accessibilityLabel={g.recording?'녹음 마치기':'마이크로 말하기'} disabled={!canTalk && !g.recording} onPress={game.voice} style={[s.micButton,{opacity:canTalk || g.recording?1:.4}]}><Svg width={23} height={23} viewBox="0 0 24 24">{g.recording ? <Rect x="5" y="5" width="14" height="14" rx="3" fill={C.coral} /> : <><Rect x="9" y="2" width="6" height="13" rx="3" fill={C.ink} /><Path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" stroke={C.ink} strokeWidth="2" fill="none" strokeLinecap="round" /></>}</Svg></Pressable>
@@ -129,7 +123,7 @@ function GameApp() {
         <ScrollView style={{flex:1}} contentContainerStyle={{flexGrow:1}}>
           <View style={s.homeHeading}><Text style={s.panelEyebrow}>브리즈번 · DAY {store.currentShiftDay}</Text><Text style={s.heroTitle}>{store.userProfile.englishNameAlphabet},<Text>{'\n'}오늘도 좋은 아침!</Text></Text></View>
           <View style={{height:Math.max(220,Math.min(height*.34,330)),marginHorizontal:16,borderRadius:32,overflow:'hidden'}}><CafeScene home gender={store.userProfile.gender}/></View>
-          <View style={s.homeCaption}><Text style={s.subtitle}>커피 한 잔, 작은 이야기 하나.</Text><Pressable accessibilityRole="button" accessibilityLabel="단골 손님 보기" onPress={()=>openBook('customers')} style={s.regularLink}><Text style={s.regularText}>♥ 단골 {regulars}/20</Text></Pressable></View>
+          <View style={s.homeCaption}><Pressable accessibilityRole="button" accessibilityLabel="단골 손님 보기" onPress={()=>openBook('customers')} style={s.regularLink}><Text style={s.regularText}>♥ 단골 {regulars}/20</Text></Pressable></View>
           <View style={s.homeActions}><Button onPress={()=>setBriefingOpen(true)}>카페 문 열기 →</Button></View>
         </ScrollView>
         <BottomTabs active="work" onWork={()=>setBook(null)} onNotes={()=>openBook('vault')} />

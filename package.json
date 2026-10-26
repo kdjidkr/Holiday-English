@@ -11,9 +11,12 @@
     "build:web": "expo export --platform web",
     "build:android:preview": "npx eas-cli build --platform android --profile preview",
     "build:ios:preview": "npx eas-cli build --platform ios --profile preview",
+    "update:preview": "npx eas-cli update --channel preview",
+    "update:production": "npx eas-cli update --channel production",
+    "release:preview": "node scripts/release-preview.cjs",
     "start:server": "node server/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-server.cjs && node scripts/test-api-url.cjs && node scripts/test-game.cjs && node scripts/test-briefing.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs && node scripts/test-vault-dictionary.cjs && node scripts/test-vocabulary-test.cjs && node scripts/test-vocabulary-ui.cjs",
+    "test": "node scripts/test-server.cjs && node scripts/test-api-url.cjs && node scripts/test-game.cjs && node scripts/test-native-audio.cjs && node scripts/test-briefing.cjs && node scripts/test-translation.cjs && node scripts/test-expressions.cjs && node scripts/test-shift-review.cjs && node scripts/test-tts.cjs && node scripts/test-suggestions.cjs && node scripts/test-jev-proxy.cjs && node scripts/test-flashcards.cjs && node scripts/test-vault-dictionary.cjs && node scripts/test-vocabulary-test.cjs && node scripts/test-vocabulary-ui.cjs",
     "voices:generate": "node scripts/generate-arrival-voices.cjs"
   },
   "dependencies": {
@@ -23,7 +26,9 @@
     "expo-file-system": "~17.0.1",
     "expo-linear-gradient": "~13.0.2",
     "expo-secure-store": "~13.0.2",
+    "expo-speech-recognition": "^0.3.2",
     "expo-status-bar": "~1.12.1",
+    "expo-updates": "~0.25.28",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.74.5",

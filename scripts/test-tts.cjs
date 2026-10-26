@@ -9,7 +9,7 @@ class Audio {
   async decodeAudioData(bytes){assert.equal(Buffer.from(bytes).toString(),'WAV');return {};}
   createBufferSource(){return {connect(){},start(){setImmediate(()=>this.onended?.());},stop(){this.onended?.();}};}
 }
-vm.runInNewContext(source,{module:mod,exports:mod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:name==='./apiClient'?{apiFetch:fakeFetch}:require(name),window:{AudioContext:Audio},fetch:fakeFetch,setTimeout,clearTimeout,AbortController,atob});
+vm.runInNewContext(source,{module:mod,exports:mod.exports,require:name=>name==='./apiUrl'?{apiUrl:value=>value}:name==='./apiClient'?{apiFetch:fakeFetch}:name==='react-native'?{Platform:{OS:'web'}}:name==='expo-av'?{Audio:{}}:name==='expo-file-system'?{}:name==='./geminiLive'?{bytesToBase64(){},pcmToWav(){}}:require(name),window:{AudioContext:Audio},fetch:fakeFetch,setTimeout,clearTimeout,AbortController,atob});
 const {GeminiTtsClient,customerVoice,CUSTOMER_VOICES}=mod.exports;
 const castModule={exports:{}};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/scenarios/customers.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:castModule,exports:castModule.exports,require});

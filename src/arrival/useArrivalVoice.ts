@@ -35,7 +35,7 @@ export function useArrivalVoice(beat: ArrivalBeat, enabled: boolean) {
     }
   };
   useEffect(() => {
-    if (enabled && beat !== 'BOARDING') void play(); else { stop(); setPlaying(false); }
+    if (enabled && beat !== 'WELCOME') void play(); else { stop(); setPlaying(false); }
     return stop;
   }, [beat, enabled]);
   return { playing, error, replay: play };

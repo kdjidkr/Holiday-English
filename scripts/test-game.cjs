@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const fs = require('node:fs');
 const vm = require('node:vm');
-function load(path, resolve = name => name === './apiUrl' ? {apiUrl:value=>value,geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'} : name === './apiClient' ? {apiFetch:()=>{throw Error('Unexpected API call');}} : require(name)) {
+function load(path, resolve = name => name === './apiUrl' ? {apiUrl:value=>value,geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'} : name === './apiClient' ? {apiFetch:()=>{throw Error('Unexpected API call');}} : name === './geminiLive' ? {bytesToBase64(){},pcmToWav(){}} : name === 'react-native' ? {Platform:{OS:'web'}} : name === 'expo-av' ? {Audio:{}} : name === 'expo-file-system' ? {} : require(name)) {
   const output = ts.transpileModule(fs.readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} }; vm.runInNewContext(output, { module, exports: module.exports, require: resolve, setTimeout, clearTimeout }); return module.exports;
 }
@@ -17,6 +17,9 @@ console.log('PASS: coherent shift briefing, three topics, date-aware holiday con
 const ttsModule = load('src/core/geminiTts.ts');
 const handover = load('src/core/handoverGreeting.ts');
 const customerData = load('src/scenarios/customers.ts', id => id === './types' ? {} : require(id));
+assert.equal(customerData.BRISBANE_CUSTOMERS.length,14);
+assert.deepEqual(Array.from(customerData.BRISBANE_CUSTOMERS,customer=>customer.portraitIndex),Array.from({length:14},(_,index)=>index));
+console.log('PASS: customer roster only includes the 14 portrait-backed guests');
 const attributionDialogue=[
   {speaker:'customer',text:'You should visit South Bank this weekend.',kind:'conversation'},
   {speaker:'user',text:"I'll check it out!",kind:'conversation'},
@@ -122,7 +125,9 @@ persisted.completeShift = record => {
   }
   persisted.shiftHistory.unshift({...record,newRegularIds:ids}); persisted.currentShiftDay++;
 };
-let liveCallbacks, selectedVoice, livePrompt, sentLive=[], disconnects=0;
+let liveCallbacks, selectedVoice, livePrompt, sentLive=[], disconnects=0, platformOS='web', nativeSpeechOptions=null;
+const nativeSpeechListeners = new Map();
+const emitNativeSpeech = (event, value = {}) => { for (const listener of nativeSpeechListeners.get(event) || []) listener(value); };
 let greetingGenerator=()=>Promise.reject(new Error('offline test'));
 class MockLive {
   setSoundEnabled(enabled) {this.soundEnabled=enabled;}
@@ -134,13 +139,15 @@ class MockLive {
 const hookSource = ts.transpileModule(fs.readFileSync('src/core/useCafeGame.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const hookModule={exports:{}};
 const mocks = {
+  'react-native':{Platform:{get OS(){return platformOS;}}},
+  'expo-speech-recognition':{ExpoSpeechRecognitionModule:{requestPermissionsAsync:async()=>({granted:true}),start(options){nativeSpeechOptions=options;},stop(){emitNativeSpeech('end');},abort(){}},addSpeechRecognitionListener(event,listener){const listeners=nativeSpeechListeners.get(event)||new Set();listeners.add(listener);nativeSpeechListeners.set(event,listeners);return{remove:()=>listeners.delete(listener)};}},
   react:{useState:init=>{rendered=init;return [init,next=>{rendered=next;}];},useRef:current=>({current}),useEffect:fn=>fn()},
   '../store/gameStore':{useGameStore:{getState:()=>persisted}},
   '../scenarios/cafe':{selectCustomers:()=>people.slice(0,1),selectVaultPatterns:cafe.selectVaultPatterns,recentCustomerSessions:cafe.recentCustomerSessions,buildSystemPromptForCustomer:cafe.buildSystemPromptForCustomer},
   '../scenarios/dailyEvents':{getRandomDailyEvent:()=>({title:'Sunny morning'})},
   './geminiLive':{GeminiLiveClient:MockLive},
   './geminiTts':{GeminiTtsClient:class extends MockLive {configureVoice(){}},customerVoice:ttsModule.customerVoice},
-  './turnManager':{TurnManager:class {reset(){} }}, './gameRules':rules,
+  './turnManager':{TurnManager:class {reset(){} handleSpeechStart(){} handleTranscriptUpdate(){} handleSpeechEnd(){} }}, './gameRules':rules,
   './handoverGreeting':{defaultHandoverGreeting:handover.defaultHandoverGreeting,generateHandoverGreeting:(...args)=>greetingGenerator(...args)},
 };
 vm.runInNewContext(hookSource,{module:hookModule,exports:hookModule.exports,require:name=>mocks[name],...fakeTimers,Date,AbortController});
@@ -221,20 +228,30 @@ assert.equal(arrival.normalizeArrivalName("O'Neil"), "O'Neil");
 assert.equal(arrival.validateArrivalName('Jun이라고 불러주세요'), null);
 assert.notEqual(arrival.validateArrivalName('써니'), null);
 assert.notEqual(arrival.validateArrivalName('A'.repeat(31)), null);
-let arrivalBeat='BOARDING', arrivalSteps=0;
+let arrivalBeat='WELCOME', arrivalSteps=0;
 while(arrivalBeat!=='FIRST_SHIFT' && arrivalSteps<20) { arrivalBeat=arrival.nextArrivalBeat(arrivalBeat);arrivalSteps++; }
-assert.equal(arrivalBeat,'FIRST_SHIFT');assert.equal(arrivalSteps,6);
+assert.equal(arrivalBeat,'FIRST_SHIFT');assert.equal(arrivalSteps,2);
 assert.equal(arrival.nextArrivalBeat('FIRST_SHIFT'),'FIRST_SHIFT');
-assert.equal(arrival.arrivalLines.NAME.speaker,'manager');
-assert.equal(arrival.arrivalLines.FIRST_SHIFT.speaker,'manager');
-assert.equal(arrival.arrivalLines.BOARDING.speaker,'driver');
-console.log('PASS: arrival input validation, taxi-to-cafe sequence, single player name prompt, first-shift boundary');
+assert.equal(arrival.nextArrivalBeat('WELCOME'),'NAME');
+assert.equal(arrival.nextArrivalBeat('NAME'),'FIRST_SHIFT');
+console.log('PASS: arrival input validation, welcome-name-start sequence, first-shift boundary');
+
+(async()=>{
+  platformOS='ios'; game.start('live'); advance(2200);
+  liveCallbacks.onText('Hello!'); liveCallbacks.onComplete(); game.acceptOrder();
+  game.voice(); await new Promise(setImmediate);
+  assert.equal(rendered.recording,true); assert.equal(nativeSpeechOptions.lang,'en-AU'); assert.equal(nativeSpeechOptions.iosCategory.category,'playAndRecord');
+  emitNativeSpeech('speechstart'); emitNativeSpeech('result',{isFinal:false,results:[{transcript:'Could I get a flat white?'}]});
+  assert.equal(rendered.transcript,'Could I get a flat white?');
+  game.voice(); assert.equal(rendered.recording,false); game.leave(); platformOS='web';
+  console.log('PASS: iOS native permission, English speech recognition events, transcript updates and stop handling');
+})().catch(error=>{console.error(error);process.exitCode=1;});
 
 // Muting must silence existing and future audio without ending an active reply.
 {
   const source=ts.transpileModule(fs.readFileSync('src/core/geminiLive.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
   const mod={exports:{}};let completed=0;
-  vm.runInNewContext(source,{exports:mod.exports,require:()=>({geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'}),setTimeout:fn=>{fn();return 1;},clearTimeout});
+  vm.runInNewContext(source,{exports:mod.exports,require:name=>name==='./apiUrl'?{geminiLiveSocketUrl:()=> 'ws://localhost:3000/api/gemini/live'}:name==='react-native'?{Platform:{OS:'web'}}:name==='expo-av'?{Audio:{}}:name==='expo-file-system'?{}:{},setTimeout:fn=>{fn();return 1;},clearTimeout});
   const live=new mod.exports.GeminiLiveClient();
   live.output={gain:{value:1}};live.audio={state:'running'};live.active=true;live.generating=true;live.callbacks={onComplete:()=>completed++};
   live.setSoundEnabled(false);assert.equal(live.output.gain.value,0);assert.equal(completed,0);

@@ -2,7 +2,13 @@
   "expo": {
     "name": "Sunny Side · Aussie WH",
     "slug": "aussie-wh-simulator",
-    "version": "2.0.0",
+    "version": "2.0.1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c5006aaf-e9b9-4e64-9be0-e8db823d2e96"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -11,20 +17,26 @@
     },
     "ios": {
       "bundleIdentifier": "com.sunnyside.aussiewhsimulator",
+      "buildNumber": "2",
       "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "손님과의 실시간 영어 스몰토크 대화를 위해 마이크 권한이 필요합니다.",
+        "NSSpeechRecognitionUsageDescription": "손님과의 대화를 영어로 인식하기 위해 음성 인식 권한이 필요합니다.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.sunnyside.aussiewhsimulator",
-      "permissions": [
-        "RECORD_AUDIO"
-      ]
+      "package": "com.sunnyside.aussiewhsimulator"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "손님과 영어로 대화하기 위해 마이크를 사용합니다.",
+          "speechRecognitionPermission": "말한 영어를 대화에 입력하기 위해 음성 인식을 사용합니다."
+        }
+      ]
     ],
     "extra": {
       "eas": {

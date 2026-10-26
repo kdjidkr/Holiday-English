@@ -1,3 +1,4 @@
+import {Disclosure} from './Disclosure';
 import {SaveNoteButton} from './SaveNoteButton';
 import { FrameProposalCard } from './FrameProposalCard';
 import { palette as C } from './design';
@@ -25,7 +26,7 @@ export function ShiftReview({record,onLoadingChange}:{record:ShiftRecord;onLoadi
     return()=>{active=false;clearTimeout(timer);controller.abort();};
   },[record.id,cards,attempt]);
   return <View style={{marginTop:24,gap:12}}>
-    <Text style={{fontSize:21,lineHeight:29,fontWeight:'800',color:C.ink}}>오늘 나눈 말, 이렇게도 표현해요</Text>
+    <Text style={{fontSize:21,lineHeight:29,fontWeight:'800',color:C.ink}}>오늘의 표현</Text>
     {loading && <ReviewLoading />}
     {!!error && <Pressable accessibilityRole="button" accessibilityLabel="복습 표현 다시 불러오기" onPress={()=>{setError('');setLoading(true);setAttempt(value=>value+1);}} style={{paddingVertical:12}}><Text style={{fontSize:13,color:'#A35137'}}>{error} ↻</Text></Pressable>}
     {cards?.length===0 && <Text style={{fontSize:13,lineHeight:21,color:C.muted}}>오늘은 복습할 발화가 충분하지 않았어요. 다음 근무에서 나눈 말로 다시 준비할게요.</Text>}
@@ -33,13 +34,14 @@ export function ShiftReview({record,onLoadingChange}:{record:ShiftRecord;onLoadi
       <Pressable accessibilityRole="button" accessibilityLabel={card.koreanSentence} accessibilityState={{expanded:expanded===index}} onPress={()=>setExpanded(expanded===index?null:index)} style={{backgroundColor:C.cream,borderRadius:18,padding:18,flexDirection:'row',alignItems:'center',gap:12}}><Text style={{flex:1,fontSize:16,lineHeight:24,fontWeight:'700',color:C.ink}}>{card.koreanSentence}</Text><Text style={{fontSize:20,color:C.ink}}>{expanded===index?'−':'＋'}</Text></Pressable>
       {expanded===index && <View style={{paddingVertical:16,gap:14}}>
         <Text style={{fontSize:11,fontWeight:'700',color:C.coral}}>{card.kind==='polish'?'조금 더 자연스럽게':card.kind==='good'?'잘 쓴 표현이에요':'이렇게도 말할 수 있어요'}</Text>
-        <Text style={{fontSize:13,lineHeight:22,color:C.muted}}>{card.note}</Text>
+
         {card.expressions.map((expression,i)=>{
           const pattern=reviewExpressionToPattern(record,card,i);
-          return <View key={pattern.id} style={{backgroundColor:C.paper,borderRadius:18,borderWidth:1,borderColor:C.line,padding:16,gap:8}}>
+          return <View key={pattern.id} style={{paddingVertical:12,borderBottomWidth:1,borderBottomColor:C.line,gap:8}}>
             <SelectableDialogue text={expression.english} day={record.day} speaker="복습 대안" textStyle={{fontSize:18,lineHeight:27,fontWeight:'700'}} headerAction={<SaveNoteButton pattern={pattern}/>} />
-            {expression.frame && <FrameProposalCard frame={expression.frame} day={record.day} source={record.sessions[card.sessionIndex].dialogue[card.turnIndex].text} speaker="내가 했던 말" sourceKorean={card.sourceKorean} />}
-            <Text style={{fontSize:13,lineHeight:21,color:C.muted}}>{expression.koreanMeaning}</Text><Text style={{fontSize:12,lineHeight:20,color:C.muted}}>{expression.explanation}</Text>
+            <Text style={{fontSize:13,lineHeight:21,color:C.muted}}>{expression.koreanMeaning}</Text>
+            {expression.frame && <Disclosure label="문장 틀"><FrameProposalCard frame={expression.frame} day={record.day} source={record.sessions[card.sessionIndex].dialogue[card.turnIndex].text} speaker="내가 했던 말" sourceKorean={card.sourceKorean} /></Disclosure>}
+            <Disclosure label="설명"><Text style={{fontSize:12,lineHeight:20,color:C.muted}}>{expression.explanation}</Text></Disclosure>
           </View>;
         })}
       </View>}

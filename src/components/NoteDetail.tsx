@@ -1,5 +1,7 @@
 import {occurrences} from '../core/vaultDictionary';
 import React from 'react';
+import {Disclosure} from './Disclosure';
+import {classifyNote} from '../core/flashcards';
 import {Platform,Pressable,StyleSheet,Text,View} from 'react-native';
 import Svg,{Path} from 'react-native-svg';
 import type {LearnedPattern} from '../scenarios/types';
@@ -22,11 +24,12 @@ export function NoteDetail({note,onBack,onStar,senses=[],onSense}:{note:LearnedP
     <View style={s.navigation}><Pressable accessibilityRole="button" onPress={onBack} style={s.back}><Svg width={18} height={18} viewBox="0 0 24 24"><Path d="M14 5l-7 7 7 7M7 12h13" stroke={C.ink} strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round"/></Svg><Text style={s.backLabel}>표현노트</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`별표 ${note.starred?'해제':'추가'}`} accessibilityState={{selected:!!note.starred}} onPress={onStar} style={s.star}><Text style={{fontSize:26,color:note.starred?C.coral:C.muted}}>{note.starred?'★':'☆'}</Text></Pressable></View>
     <View style={s.hero}><Text selectable accessibilityRole="header" style={[s.english,note.englishTemplate.length>35 && {fontSize:28,lineHeight:39,letterSpacing:-0.7}]}>{note.englishTemplate}</Text><Text selectable style={s.meaning}>{note.koreanMeaning}</Text></View>
     {senses.length>1 && <View style={{gap:6,paddingBottom:12}}><Text style={s.label}>뜻 {senses.length}개</Text>{senses.map((sense,index)=><Pressable key={sense.id} accessibilityRole="button" accessibilityState={{selected:sense.id===note.id}} onPress={()=>onSense?.(sense)} style={{padding:12,borderRadius:12,backgroundColor:sense.id===note.id?C.mint:C.cream}}><Text style={{fontSize:14,lineHeight:22,color:C.ink}}>{index+1}. {sense.koreanMeaning}</Text></Pressable>)}</View>}
-    {!!(note.frame?.slotHint || note.explanation) && <Text style={s.explanation}>{note.frame?.slotHint || note.explanation}</Text>}
-    {occurrences(note).filter(o=>o.sourceQuote).map((o,index)=><View key={`${index}-${o.day}`} style={s.section}>
+    {!!(note.frame?.slotHint || note.explanation) && <Disclosure key={`explanation-${note.id}`} label="설명"><Text style={s.explanation}>{note.frame?.slotHint || note.explanation}</Text></Disclosure>}
+    {classifyNote(note)!=='sentence' && occurrences(note).some(o=>o.sourceQuote) && <Disclosure key={note.id} label="대화에서">{occurrences(note).filter(o=>o.sourceQuote).map((o,index)=><View key={`${index}-${o.day}`} style={s.section}>
       <View style={s.sectionHeading}><Text style={s.label}>대화에서</Text><Text style={s.metadata}>{o.day}일차{o.speaker?` · ${o.speaker}`:''}</Text></View>
       <View style={s.quote}><Emphasis text={o.sourceQuote!} note={note} style={s.quoteEnglish} />{!!o.sourceKorean && <Text selectable style={[s.exampleKorean,{marginTop:8}]}>{o.sourceKorean}</Text>}</View>
     </View>)}
+    </Disclosure>}
     {!!examples.length && <View style={s.section}><Text style={s.label}>{note.learningKind==='frame'?'이렇게 바꿔 써요':'예문'}</Text>{examples.map((example,index)=><View key={`${index}-${example.english}`} style={[s.example,index>0 && s.exampleSeparator]}><Emphasis text={example.english} note={note} style={s.exampleEnglish} />{!!example.korean && <Text selectable style={s.exampleKorean}>{example.korean}</Text>}</View>)}</View>}
   </View>;
 }

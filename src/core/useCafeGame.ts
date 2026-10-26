@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
+import { addSpeechRecognitionListener, ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { CustomerPersona, DailyEvent } from '../scenarios/types';
 import { useGameStore } from '../store/gameStore';
 import { selectCustomers, buildSystemPromptForCustomer, selectVaultPatterns, recentCustomerSessions } from '../scenarios/cafe';
@@ -169,6 +171,10 @@ export function useCafeGame() {
     const s = current.current;
     if (s.recording) { recognition.current?.stop(); return; }
     if (s.busy || s.status !== 'ready' || s.phase!=='CHATTING') return;
+    if (Platform.OS !== 'web') {
+      void startNativeRecognition();
+      return;
+    }
     const Speech = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
     if (!Speech) { patch({ error: '이 기기에서는 음성 인식을 사용할 수 없어요. 아래 키보드로 직접 말해 주세요.' }); return; }
     const rec = new Speech(); recognition.current = rec;
@@ -193,6 +199,49 @@ export function useCafeGame() {
     patch({ recording: true, transcript: '', error: null });
     try { rec.start(); manager.current?.handleSpeechEnd(); } catch { stopRecognition(); patch({ error: '마이크를 시작하지 못했습니다.' }); }
   };
+  const startNativeRecognition = async () => {
+    const startedInGeneration=generation.current;
+    patch({ recording: true, transcript: '', error: null });
+    try {
+      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if(startedInGeneration!==generation.current)return;
+      if (!permission.granted) throw new Error('마이크와 음성 인식 권한을 허용해 주세요.');
+      let finalTranscript = '';
+      let received = false;
+      const subscriptions: Array<{ remove: () => void }> = [];
+      const cleanup = () => subscriptions.splice(0).forEach(subscription => subscription.remove());
+      const handle = {
+        stop: () => ExpoSpeechRecognitionModule.stop(),
+        abort: () => { cleanup(); ExpoSpeechRecognitionModule.abort(); },
+      };
+      recognition.current = handle;
+      subscriptions.push(addSpeechRecognitionListener('speechstart', () => manager.current?.handleSpeechStart()));
+      subscriptions.push(addSpeechRecognitionListener('result', event => {
+        const segment = event.results.map(result => result.transcript).filter(Boolean).join(' ').trim();
+        if (event.isFinal && segment) finalTranscript = [finalTranscript, segment].filter(Boolean).join(' ');
+        const text = [finalTranscript, !event.isFinal ? segment : ''].filter(Boolean).join(' ').trim();
+        received = !!text;
+        patch({ transcript: text }); manager.current?.handleTranscriptUpdate(text);
+        if (event.isFinal) manager.current?.handleSpeechEnd();
+      }));
+      subscriptions.push(addSpeechRecognitionListener('error', event => {
+        if (recognition.current !== handle) return;
+        recognition.current = null; cleanup(); manager.current?.reset();
+        patch({ recording: false, transcript: '', error: event.error === 'not-allowed' ? '마이크와 음성 인식 권한을 허용해 주세요.' : '음성을 듣지 못했어요. 다시 시도해 주세요.' });
+      }));
+      subscriptions.push(addSpeechRecognitionListener('end', () => {
+        if (recognition.current !== handle) return;
+        recognition.current = null; cleanup(); patch({ recording: false });
+        if (received) manager.current?.handleSpeechEnd();
+      }));
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-AU', interimResults: true, continuous: true,
+        iosCategory: { category: 'playAndRecord', categoryOptions: ['defaultToSpeaker', 'allowBluetooth'], mode: 'measurement' },
+      });
+    } catch (error) {
+      if(startedInGeneration===generation.current){stopRecognition();patch({ error: error instanceof Error ? error.message : '마이크를 시작하지 못했습니다.' });}
+    }
+  };
   useEffect(() => {
     const timer = setInterval(() => {
       const s = current.current;
@@ -215,7 +264,7 @@ export function useCafeGame() {
     const id = generation.current;
     const enabled = await client.current?.enableAudio();
     if (id !== generation.current) return;
-    patch({ error: enabled ? null : '소리를 시작하지 못했습니다. 브라우저의 음소거 설정을 확인해 주세요.', stalled: !enabled });
+    patch({ error: enabled ? null : '소리를 시작하지 못했습니다. 기기의 음량과 오디오 출력을 확인해 주세요.', stalled: !enabled });
   };
   const setSoundEnabled = async (enabled: boolean) => {
     useGameStore.getState().setSoundEnabled(enabled);
